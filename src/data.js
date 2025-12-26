@@ -1,5 +1,3 @@
-import React from 'react'
-
 // All categories, services, prices, images, and descriptions
 
 export const CATEGORIES = [
@@ -100,7 +98,8 @@ export const CATEGORIES = [
         id: 'claudie-ai-pro',
         name: 'Claudie AI Pro',
         price: 800,
-        image: 'https://keys-shop.in/wp-content/uploads/2024/10/claude-3-pro-ai.jpg',
+        image:
+          'https://keys-shop.in/wp-content/uploads/2024/10/claude-3-pro-ai.jpg',
         description:
           'Advanced Claude AI Pro access for detailed research and creative writing. Monthly subscription.',
       },
@@ -138,21 +137,8 @@ export const CATEGORIES = [
         price: 100,
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
-        description: (
-          <>
-            Share a file and get both AI and plagiarism reports in minimal time.
-            Click the{' '}
-            <a
-              href="https://t.me/KaptainTurnitinBot"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              Telegram bot link
-            </a>{' '}
-            to join the bot for autogeneration of the reports.
-          </>
-        ),
+        description:
+          'Share a file and get both AI and plagiarism reports in minimal time. Click the Telegram bot link to join the bot for autogeneration of the reports: https://t.me/KaptainTurnitinBot.',
       },
       {
         id: 'turnitin-slots-1',
@@ -178,25 +164,9 @@ export const CATEGORIES = [
         price: 40,
         image:
           'https://gptzero.me/news/content/images/2024/12/GPTZero-Confidence-Score-Uncertain.png',
-        description: (
-          <>
-            Share a file and get GptZero AI-detection report in minimal time
-            possible. You can also autogenerate the reports from telegram bot
-            here:{' '}
-            <a
-              href="https://t.me/KaptainTurnitinBot"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              Telegram bot link
-            </a>
-            .
-          </>
-        ),
+        description:
+          'Share a file and get GptZero AI-detection report in minimal time possible. You can also autogenerate the reports from telegram bot here: https://t.me/KaptainTurnitinBot.',
       },
-
-      // Keep the other tools as they are
       {
         id: 'quillbot-premium',
         name: 'Quillbot Premium',
@@ -211,7 +181,7 @@ export const CATEGORIES = [
         name: 'Grammarly Premium',
         price: 150,
         image:
-          'https://media.cybernews.com/images/featured/2025/01/grammarly-review.jpg',
+          'https://www.suno.edu/assets/suno/images/Library_and_Resources/Grammarly-Logo.jpeg',
         description:
           'Advanced grammar correction and AI and similarity detection. Monthly subscription.',
       },
@@ -311,7 +281,8 @@ export const CATEGORIES = [
         id: 'nordvpn',
         name: 'Nord VPN',
         price: 400,
-        image: 'https://upload.wikimedia.org/wikipedia/commons/4/49/NordVPN_Logo.png',
+        image:
+          'https://upload.wikimedia.org/wikipedia/commons/4/49/NordVPN_Logo.png',
         description:
           'Access to servers in 69+ countries, with customizable plans and strong privacy features. Monthly subscription.',
       },
@@ -328,7 +299,8 @@ export const CATEGORIES = [
         id: 'static-residential-proxy',
         name: 'Static Residential Proxy',
         price: 1000,
-        image: 'https://www.ipburger.com/wp-content/uploads/2023/01/Bach-1024x512.png',
+        image:
+          'https://www.ipburger.com/wp-content/uploads/2023/01/Bach-1024x512.png',
         description:
           'Access specific states/streets in the given countries. Dowload Gologin App and Create an account then request for access details.',
       },
@@ -355,7 +327,8 @@ export const CATEGORIES = [
         id: 'netflix',
         name: 'Netflix Premium',
         price: 400,
-        image: 'https://w0.peakpx.com/wallpaper/134/43/HD-wallpaper-netflix-netflix-site.jpg',
+        image:
+          'https://w0.peakpx.com/wallpaper/134/43/HD-wallpaper-netflix-netflix-site.jpg',
         description:
           'Access to Ultra HD streaming on Netflix; cost applies per device connected. Monthly subscription.',
       },
