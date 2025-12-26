@@ -1,3 +1,5 @@
+import React from 'react'
+
 // All categories, services, prices, images, and descriptions
 
 export const CATEGORIES = [
@@ -62,8 +64,7 @@ export const CATEGORIES = [
         id: 'writerhuman',
         name: 'Writerhuman',
         price: 1000,
-        image:
-          'https://blog.writehuman.ai/content/images/2023/07/blog1short.png',
+        image: 'https://blog.writehuman.ai/content/images/2023/07/blog1short.png',
         description:
           'Humanizes up to 3,000 words per request, with a focus on natural, human-like text conversion. Monthly subscription.',
       },
@@ -99,8 +100,7 @@ export const CATEGORIES = [
         id: 'claudie-ai-pro',
         name: 'Claudie AI Pro',
         price: 800,
-        image:
-          'https://keys-shop.in/wp-content/uploads/2024/10/claude-3-pro-ai.jpg',
+        image: 'https://keys-shop.in/wp-content/uploads/2024/10/claude-3-pro-ai.jpg',
         description:
           'Advanced Claude AI Pro access for detailed research and creative writing. Monthly subscription.',
       },
@@ -133,59 +133,70 @@ export const CATEGORIES = [
     title: 'Turnitin & Other Detection Tools',
     items: [
       {
-        id: 'ai-plag-check',
-        name: 'AI & Plagiarism Check',
-        price: 30,
+        id: 'turnitin-reports',
+        name: 'Turnitin Reports',
+        price: 100,
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
-        description:
-          'Share a file and get both AI-detection and plagiarism reports in minimal time.',
+        description: (
+          <>
+            Share a file and get both AI and plagiarism reports in minimal time.
+            Click the{' '}
+            <a
+              href="https://t.me/KaptainTurnitinBot"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Telegram bot link
+            </a>{' '}
+            to join the bot for autogeneration of the reports.
+          </>
+        ),
       },
       {
-        id: 'turnitin-slots-5',
-        name: 'Turnitin Slots (5)',
-        price: 75,
+        id: 'turnitin-slots-1',
+        name: 'Turnitin Slots (1)',
+        price: 100,
         image:
-          'https://collection.cloudinary.com/drigj7ypl/91d4225fc64ff0d01eb72c71b8c236c8',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRINhrlO336s3xS3CkdAugNMKXLm1YgmMPu0w&s',
         description:
-          'Purchase a link with any number of 5 slots with 5 as the minimum number, each slot allowing a single document check. Each slot cost ksh. 15. The link is exclusively for your use and has a 30 days validity.',
+          'Purchase a link with any number of slots with the minimum no minimum number, each slot allowing a single document check. Each slot cost ksh. 100. The link is exclusively for your use and has a 30 days validity.',
       },
       {
-        id: 'shared-turndetect',
-        name: 'Shared Turnitin  turndetect.com',
-        price: 500,
+        id: 'turnitin-weekly-subscription',
+        name: 'Turnitin Weekly Subscription',
+        price: 2200,
         image:
-          'https://turndetect.com/static/media/logo.8aa43a3a73b739e1e290.png',
+          'https://www.turnitindetector.com/images/turnitin/use-pt-1.png',
         description:
-          'Provides 100 checks which resets every 24hrs.10 Users per Account. Monthly subscription.',
+          'Provides 20 checks distributed across 5 student Turnitin slots that reset every 24hrs. You will be required to provide an email not registered to Turnitin so it can be added to the instructor Turnitin by midnight of the day you place the order. After activation, you will receive an email to set up a student account and a video showing how to generate AI reports from https://ai.originalityhub.com/. The account has a 5 day validity.',
       },
       {
-        id: 'personal-turndetect-multi',
-        name: 'Personal Turnitin  turndetect.com (Multi-Devise)',
-        price: 1800,
+        id: 'gptzero-ai-reports',
+        name: 'GPTZero AI Reports',
+        price: 40,
         image:
-          'https://turndetect.com/static/media/logo.8aa43a3a73b739e1e290.png',
-        description:
-          'Provides 100 checks which resets every 24hrs. You Create a personal account and be provided with a a month’s redeem code for activation. Can be signed in on Multiple devices at a go.  Monthly subscription',
+          'https://gptzero.me/news/content/images/2024/12/GPTZero-Confidence-Score-Uncertain.png',
+        description: (
+          <>
+            Share a file and get GptZero AI-detection report in minimal time
+            possible. You can also autogenerate the reports from telegram bot
+            here:{' '}
+            <a
+              href="https://t.me/KaptainTurnitinBot"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Telegram bot link
+            </a>
+            .
+          </>
+        ),
       },
-      {
-        id: 'personal-turndetect-single',
-        name: 'Personal Turnitin  turndetect.com (Single-Devise)',
-        price: 1500,
-        image:
-          'https://turndetect.com/static/media/logo.8aa43a3a73b739e1e290.png',
-        description:
-          'Provides 100 checks which resets every 24hrs. Create a personal account and be provided with a a month’s redeem code for activation. Can be signed in on Multiple devices at a go.  Monthly subscription',
-      },
-      {
-        id: 'personal-daily-turndetect-multi',
-        name: 'Personal Daily Turnitin  turndetect.com (Multi-Devise)',
-        price: 200,
-        image:
-          'https://turndetect.com/static/media/logo.8aa43a3a73b739e1e290.png',
-        description:
-          'Provides 100 checks which resets every 24hrs. Create a personal account and be provided with a a month’s redeem code for activation. Can be signed in on Multiple devices at a go.',
-      },
+
+      // Keep the other tools as they are
       {
         id: 'quillbot-premium',
         name: 'Quillbot Premium',
@@ -300,8 +311,7 @@ export const CATEGORIES = [
         id: 'nordvpn',
         name: 'Nord VPN',
         price: 400,
-        image:
-          'https://upload.wikimedia.org/wikipedia/commons/4/49/NordVPN_Logo.png',
+        image: 'https://upload.wikimedia.org/wikipedia/commons/4/49/NordVPN_Logo.png',
         description:
           'Access to servers in 69+ countries, with customizable plans and strong privacy features. Monthly subscription.',
       },
@@ -318,8 +328,7 @@ export const CATEGORIES = [
         id: 'static-residential-proxy',
         name: 'Static Residential Proxy',
         price: 1000,
-        image:
-          'https://www.ipburger.com/wp-content/uploads/2023/01/Bach-1024x512.png',
+        image: 'https://www.ipburger.com/wp-content/uploads/2023/01/Bach-1024x512.png',
         description:
           'Access specific states/streets in the given countries. Dowload Gologin App and Create an account then request for access details.',
       },
@@ -346,8 +355,7 @@ export const CATEGORIES = [
         id: 'netflix',
         name: 'Netflix Premium',
         price: 400,
-        image:
-          'https://w0.peakpx.com/wallpaper/134/43/HD-wallpaper-netflix-netflix-site.jpg',
+        image: 'https://w0.peakpx.com/wallpaper/134/43/HD-wallpaper-netflix-netflix-site.jpg',
         description:
           'Access to Ultra HD streaming on Netflix; cost applies per device connected. Monthly subscription.',
       },
