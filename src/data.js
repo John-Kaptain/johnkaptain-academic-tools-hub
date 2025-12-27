@@ -134,7 +134,7 @@ export const CATEGORIES = [
       {
         id: 'turnitin-reports',
         name: 'Turnitin Reports',
-        price: 100,
+        price: 80,
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
         description:
