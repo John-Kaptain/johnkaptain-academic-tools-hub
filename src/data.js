@@ -159,6 +159,15 @@ export const CATEGORIES = [
           'Provides 20 checks distributed across 5 student Turnitin slots that reset every 24hrs. You will be required to provide an email not registered to Turnitin so it can be added to the instructor Turnitin by midnight of the day you place the order. After activation, you will receive an email to set up a student account and a video showing how to generate AI reports from https://ai.originalityhub.com/. The account has a 5 day validity.',
       },
       {
+        id: 'turnitinuk-monthly-subscription',
+        name: 'TurnitinUK monthly subscription',
+        price: 4500,
+        image:
+          'https://sites.reading.ac.uk/TEL-Support-Staff/wp-content/uploads/sites/92/2025/03/image-15.png',
+        description:
+          'Provides 100 Submissions limit that resets every 24hrs. You will be required to provide an email not registered to Turnitin so it can be added to the instructor Turnitin by midnight of the day you place the order. After activation, you will receive an email to set up the account and a video showing how to generate the reports. 30 days Validity.',
+      },
+      {
         id: 'gptzero-ai-reports',
         name: 'GPTZero AI Reports',
         price: 40,
