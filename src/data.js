@@ -11,7 +11,7 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-premium-3',
         name: 'Stealthwriter Premium Plan (3 Users)',
-        price: 1700,
+        price: 1500,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 5000 words per request with unlimited Ghost Pro humanizations and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription.',
@@ -19,7 +19,7 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-standard-3',
         name: 'Stealthwriter Standard Plan (3 Users)',
-        price: 1500,
+        price: 1300,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 3000 words per request with 50 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription',
@@ -27,7 +27,7 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-basic-3',
         name: 'Stealthwriter Basic Plan (3Users)',
-        price: 1100,
+        price: 1000,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 2000 words per request with 20 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription',
@@ -97,7 +97,7 @@ export const CATEGORIES = [
       {
         id: 'claudie-ai-pro',
         name: 'Claudie AI Pro',
-        price: 800,
+        price: 1000,
         image:
           'https://keys-shop.in/wp-content/uploads/2024/10/claude-3-pro-ai.jpg',
         description:
@@ -134,7 +134,7 @@ export const CATEGORIES = [
       {
         id: 'turnitin-reports',
         name: 'Turnitin Reports',
-        price: 80,
+        price: 135,
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
         description:
@@ -143,20 +143,11 @@ export const CATEGORIES = [
       {
         id: 'turnitin-slots-1',
         name: 'Turnitin Slots (1)',
-        price: 100,
+        price: 140,
         image:
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRINhrlO336s3xS3CkdAugNMKXLm1YgmMPu0w&s',
         description:
           'Purchase a link with any number of slots with the minimum no minimum number, each slot allowing a single document check. Each slot cost ksh. 100. The link is exclusively for your use and has a 30 days validity.',
-      },
-      {
-        id: 'turnitin-weekly-subscription',
-        name: 'Turnitin Weekly Subscription',
-        price: 2200,
-        image:
-          'https://www.turnitindetector.com/images/turnitin/use-pt-1.png',
-        description:
-          'Provides 20 checks distributed across 5 student Turnitin slots that reset every 24hrs. You will be required to provide an email not registered to Turnitin so it can be added to the instructor Turnitin by midnight of the day you place the order. After activation, you will receive an email to set up a student account and a video showing how to generate AI reports from https://ai.originalityhub.com/. The account has a 5 day validity.',
       },
       {
         id: 'turnitinuk-monthly-subscription',
@@ -225,7 +216,7 @@ export const CATEGORIES = [
       {
         id: 'coursehero',
         name: 'Coursehero',
-        price: 30,
+        price: 40,
         image:
           'https://gradebees.com/wp-content/uploads/2021/08/Differences-between-Chegg-and-Course-Hero-.webp',
         description:
@@ -234,7 +225,7 @@ export const CATEGORIES = [
       {
         id: 'chegg',
         name: 'Chegg',
-        price: 30,
+        price: 40,
         image:
           'https://gradebees.com/wp-content/uploads/2021/08/Differences-between-Chegg-and-Course-Hero-.webp',
         description:
@@ -252,7 +243,7 @@ export const CATEGORIES = [
       {
         id: 'cliffnotes',
         name: 'Cliffnotes',
-        price: 40,
+        price: 50,
         image:
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4c0CIiJxuNC709kPWvZPFO38glvglFqjPEg&s',
         description:
@@ -316,7 +307,7 @@ export const CATEGORIES = [
       {
         id: 'us-numbers',
         name: 'US Numbers',
-        price: 1500,
+        price: 2000,
         image:
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRr4DEvIWVJE5LzWL5FiE7VrBqnrL8OOEQiQ&s',
         description:
@@ -344,7 +335,7 @@ export const CATEGORIES = [
       {
         id: 'dstv',
         name: 'DSTV Premium',
-        price: 1500,
+        price: 1800,
         image:
           'https://www.sahomeowner.co.za/wp-content/uploads/2017/12/DStv-Premium-Logo-on-Blue-Tag-RGB-HR-1.jpg',
         description:
