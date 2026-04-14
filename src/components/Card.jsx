@@ -10,8 +10,9 @@ export default function Card({ item, onOpen }) {
       />
       <div className="mt-3 font-semibold">{item.name}</div>
       <div className="text-gray-600 dark:text-gray-300">{`Ksh. ${item.price}`}</div>
+
       <button className="btn btn-primary mt-4" onClick={() => onOpen(item)}>
-        Order via WhatsApp
+        Buy Now
       </button>
     </div>
   )

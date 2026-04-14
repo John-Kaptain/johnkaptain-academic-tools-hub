@@ -7,17 +7,21 @@ import { CATEGORIES } from './data.js'
 
 function useScrollSpy(ids) {
   const [active, setActive] = useState(ids[0] ?? null)
+
   useEffect(() => {
     const obs = new IntersectionObserver(
       entries => entries.forEach(e => e.isIntersecting && setActive(e.target.id)),
       { rootMargin: '-40% 0px -55% 0px', threshold: 0.01 },
     )
+
     ids.forEach(id => {
       const el = document.getElementById(id)
       if (el) obs.observe(el)
     })
+
     return () => obs.disconnect()
-  }, [ids.join(',')])
+  }, [ids])
+
   return active
 }
 
@@ -43,21 +47,18 @@ export default function App() {
     if (!q) return items
     const s = q.toLowerCase()
     return items.filter(
-      i =>
-        i.name.toLowerCase().includes(s) ||
-        (i.description || '').toLowerCase().includes(s),
+      i => i.name.toLowerCase().includes(s) || (i.description || '').toLowerCase().includes(s),
     )
   }
 
-  // Section background colors (light + dark)
   const sectionBg = {
     'ai-humanizers': 'bg-sky-50 dark:bg-slate-900/40',
     'content-generation': 'bg-amber-50 dark:bg-amber-900/20',
     'turnitin-detection': 'bg-emerald-50 dark:bg-emerald-900/20',
-    'unlocks': 'bg-indigo-50 dark:bg-indigo-900/20',
-    'vpn': 'bg-fuchsia-50 dark:bg-fuchsia-900/20',
-    'entertainment': 'bg-rose-50 dark:bg-rose-900/20',
-    'training': 'bg-teal-50 dark:bg-teal-900/20',
+    unlocks: 'bg-indigo-50 dark:bg-indigo-900/20',
+    vpn: 'bg-fuchsia-50 dark:bg-fuchsia-900/20',
+    entertainment: 'bg-rose-50 dark:bg-rose-900/20',
+    training: 'bg-teal-50 dark:bg-teal-900/20',
   }
 
   return (
@@ -70,7 +71,6 @@ export default function App() {
         theme={theme}
       />
 
-      {/* Hero with readable overlay + black text */}
       <section className="hero relative">
         <div className="container-narrow py-10 sm:py-16">
           <div className="inline-block rounded-2xl bg-white/80 dark:bg-white/90 backdrop-blur px-4 sm:px-6 py-6 shadow">
@@ -93,7 +93,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Sections */}
       <main className="container-narrow">
         {CATEGORIES.map(cat => (
           <section key={cat.id} id={cat.id} className={`py-10 rounded-2xl ${sectionBg[cat.id]}`}>
@@ -109,10 +108,8 @@ export default function App() {
 
       <Footer />
 
-      {/* Single modal open at a time */}
       <Modal open={!!modalItem} item={modalItem} onClose={() => setModalItem(null)} />
 
-      {/* Floating WhatsApp */}
       <a
         href="https://wa.me/254701730921"
         target="_blank"
