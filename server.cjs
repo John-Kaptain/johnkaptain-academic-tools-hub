@@ -13,6 +13,10 @@ const PORT = Number(process.env.PORT || 4000)
 const INTASEND_TEST =
   String(process.env.INTASEND_TEST_ENVIRONMENT || 'true').toLowerCase() === 'true'
 
+const INTASEND_PUBLISHABLE_KEY = INTASEND_TEST
+  ? String(process.env.INTASEND_TEST_PUBLISHABLE_KEY || '')
+  : String(process.env.INTASEND_LIVE_PUBLISHABLE_KEY || '')
+
 const INTASEND_SECRET_KEY = INTASEND_TEST
   ? String(process.env.INTASEND_TEST_SECRET_KEY || '')
   : String(process.env.INTASEND_LIVE_SECRET_KEY || '')
@@ -411,6 +415,9 @@ app.use(
 )
 
 app.post('/api/checkout', async (req, res) => {
+  console.log('POST /api/checkout hit')
+  console.log('Body:', req.body)
+
   try {
     const { productId, paymentPhone } = req.body
 
@@ -466,7 +473,11 @@ app.post('/api/checkout', async (req, res) => {
       status: ORDER_STATUS.PAYMENT_PENDING,
     })
   } catch (err) {
-    console.error('Checkout error:', err.message)
+    console.error('Checkout error message:', err.message)
+    console.error('Checkout error status:', err.status || 'no-status')
+    console.error('Checkout error payload:', JSON.stringify(err.payload || {}, null, 2))
+    console.error('Checkout raw error:', err)
+
     return res.status(500).json({
       error: err.message || 'Failed to initiate payment',
     })
@@ -586,7 +597,14 @@ app.post('/intasend/webhook', (req, res) => {
       if (apiRef) order = findOrderByApiRef(apiRef)
       if (!order && invoiceId) order = findOrderByInvoiceId(invoiceId)
 
-      if (!order) return
+      if (!order) {
+        console.log(
+          `Webhook received for unknown payment. apiRef=${String(apiRef || '')} invoiceId=${String(
+            invoiceId || '',
+          )} state=${String(state || '')}`,
+        )
+        return
+      }
 
       if (state === 'COMPLETE') {
         await markOrderPaymentComplete(order.id, invoiceId, 'webhook')
@@ -609,6 +627,10 @@ app.get('/health', (req, res) => {
     telegramConfigured: Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_ADMIN_CHAT_ID),
     businessWhatsAppConfigured: Boolean(BUSINESS_WHATSAPP_NUMBER),
     allowedOrigins: ALLOWED_ORIGINS,
+    secretKeyPresent: Boolean(INTASEND_SECRET_KEY),
+    secretKeyLooksValid: String(INTASEND_SECRET_KEY || '').startsWith('ISSecretKey_'),
+    publishableKeyPresent: Boolean(INTASEND_PUBLISHABLE_KEY),
+    publishableKeyLooksValid: String(INTASEND_PUBLISHABLE_KEY || '').startsWith('ISPubKey_'),
   })
 })
 
