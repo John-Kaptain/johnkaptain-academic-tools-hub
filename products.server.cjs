@@ -1,11 +1,7 @@
 const PRODUCTS = [
-  { id: 'stealthwriter-premium-3', name: 'Stealthwriter Premium Plan (3 Users)', price: 1500 },
-  { id: 'stealthwriter-standard-3', name: 'Stealthwriter Standard Plan (3 Users)', price: 1300 },
-  { id: 'stealthwriter-basic-3', name: 'Stealthwriter Basic Plan (3Users)', price: 1000 },
-  { id: 'stealthwriter-24hr', name: 'Stealthwriter Basic Plan (24hr Plan)', price: 150 },
-  { id: 'hix-bypass', name: 'Hix Bypass', price: 800 },
+  { id: 'stealthwriter-premium-3', name: 'Stealthwriter Premium Plan (3 Users)', price: 1700 },
+  { id: 'stealthwriter-basic-3', name: 'Stealthwriter Basic Plan (3Users)', price: 1100 },
   { id: 'ryne-ai', name: 'Ryne AI', price: 1000 },
-  { id: 'writerhuman', name: 'Writerhuman', price: 1000 },
   { id: 'ai-removal-per-page', name: 'AI Removal Per Page', price: 50 },
 
   { id: 'chatgpt5-teams', name: 'ChatGPT 5 Teams Plan', price: 800 },
@@ -15,7 +11,6 @@ const PRODUCTS = [
 
   { id: 'turnitin-reports', name: 'Turnitin Reports', price: 135 },
   { id: 'turnitin-slots-1', name: 'Turnitin Slots (1)', price: 140 },
-  { id: 'turnitinuk-monthly-subscription', name: 'TurnitinUK monthly subscription', price: 4500 },
   { id: 'gptzero-ai-reports', name: 'GPTZero AI Reports', price: 40 },
   { id: 'quillbot-premium', name: 'Quillbot Premium', price: 200 },
   { id: 'grammarly-premium', name: 'Grammarly Premium', price: 150 },

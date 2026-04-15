@@ -21,7 +21,7 @@ async function apiJson(path, options = {}) {
 }
 
 function makeWhatsAppLink(orderId, itemName) {
-  const text = `Hello, I have completed payment.\nOrder ID: ${orderId}\nProduct: ${itemName}`
+  const text = `Hello, I have completed payment and I am ready to receive my logins.\nOrder ID: ${orderId}\nProduct: ${itemName}`
   return `https://wa.me/${BUSINESS_WHATSAPP_E164}?text=${encodeURIComponent(text)}`
 }
 
@@ -288,8 +288,7 @@ export default function Modal({ open, item, onClose }) {
         {step === 'delivery' && (
           <form onSubmit={submitDeliveryDetails} className="mt-5 space-y-4">
             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300">
-              Payment confirmed. Enter the WhatsApp number where you want your login details
-              delivered.
+              Payment confirmed. Enter the WhatsApp number where you want your logins delivered.
             </div>
 
             <div>
@@ -333,7 +332,7 @@ export default function Modal({ open, item, onClose }) {
             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300">
               <p className="font-semibold">Order received successfully.</p>
               <p className="mt-1">Order ID: {orderId}</p>
-              <p className="mt-1">We will contact you on WhatsApp shortly.</p>
+              <p className="mt-1">Tap below to continue on WhatsApp and receive your logins.</p>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -343,7 +342,7 @@ export default function Modal({ open, item, onClose }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Open WhatsApp
+                Continue on WhatsApp
               </a>
               <button type="button" className="btn btn-outline" onClick={onClose}>
                 Done

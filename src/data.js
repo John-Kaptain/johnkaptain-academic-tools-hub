@@ -11,43 +11,18 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-premium-3',
         name: 'Stealthwriter Premium Plan (3 Users)',
-        price: 1500,
+        price: 1700,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 5000 words per request with unlimited Ghost Pro humanizations and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription.',
       },
       {
-        id: 'stealthwriter-standard-3',
-        name: 'Stealthwriter Standard Plan (3 Users)',
-        price: 1300,
-        image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
-        description:
-          'Humanizes up to 3000 words per request with 50 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription',
-      },
-      {
         id: 'stealthwriter-basic-3',
         name: 'Stealthwriter Basic Plan (3Users)',
-        price: 1000,
+        price: 1100,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 2000 words per request with 20 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription',
-      },
-      {
-        id: 'stealthwriter-24hr',
-        name: 'Stealthwriter Basic Plan (24hr Plan)',
-        price: 150,
-        image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
-        description:
-          'Humanizes up to 2000 words per request with 20 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Direct Logins',
-      },
-      {
-        id: 'hix-bypass',
-        name: 'Hix Bypass',
-        price: 800,
-        image:
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRm1AxJHo079TwEOK3rJODJpxjR3J2EA5Xf7Q&s',
-        description:
-          'Rewrites AI-generated content for human-like readability, up to 1,000 words per request. Monthly subscription.',
       },
       {
         id: 'ryne-ai',
@@ -57,14 +32,6 @@ export const CATEGORIES = [
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGXAsI92fc31yrjiJIpDwpV9AeNx5LsUCIFQ&s',
         description:
           'Transforms AI-generated content for human-like readability, up to 1,500 words per request. Includes unlimited paraphrasing tokens and advanced sentence-level rephrasing, delivering superior grammar, clarity, and style refinement. Monthly subscription.',
-      },
-      {
-        id: 'writerhuman',
-        name: 'Writerhuman',
-        price: 1000,
-        image: 'https://blog.writehuman.ai/content/images/2023/07/blog1short.png',
-        description:
-          'Humanizes up to 3,000 words per request, with a focus on natural, human-like text conversion. Monthly subscription.',
       },
       {
         id: 'ai-removal-per-page',
@@ -148,15 +115,6 @@ export const CATEGORIES = [
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRINhrlO336s3xS3CkdAugNMKXLm1YgmMPu0w&s',
         description:
           'Purchase a link with any number of slots with the minimum no minimum number, each slot allowing a single document check. Each slot cost ksh. 100. The link is exclusively for your use and has a 30 days validity.',
-      },
-      {
-        id: 'turnitinuk-monthly-subscription',
-        name: 'TurnitinUK monthly subscription',
-        price: 4500,
-        image:
-          'https://sites.reading.ac.uk/TEL-Support-Staff/wp-content/uploads/sites/92/2025/03/image-15.png',
-        description:
-          'Provides 100 Submissions limit that resets every 24hrs. You will be required to provide an email not registered to Turnitin so it can be added to the instructor Turnitin by midnight of the day you place the order. After activation, you will receive an email to set up the account and a video showing how to generate the reports. 30 days Validity.',
       },
       {
         id: 'gptzero-ai-reports',

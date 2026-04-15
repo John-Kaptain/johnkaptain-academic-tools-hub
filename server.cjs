@@ -37,6 +37,9 @@ const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
   .map(v => v.trim())
   .filter(Boolean)
 
+const INACTIVE_START_EAT = normalizeHHMM(process.env.INACTIVE_START_EAT, '00:00')
+const INACTIVE_END_EAT = normalizeHHMM(process.env.INACTIVE_END_EAT, '06:00')
+
 const STORE_FILE = path.join(__dirname, 'orders.store.json')
 const STATUS_POLL_INTERVAL_MS = 10000
 const STATUS_POLL_MAX_ATTEMPTS = 48
@@ -52,6 +55,37 @@ const ORDER_STATUS = {
 
 let orders = {}
 let activePollers = {}
+
+function normalizeHHMM(value, fallback) {
+  const s = String(value || '').trim()
+  const m = s.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return fallback
+
+  const hh = Number(m[1])
+  const mm = Number(m[2])
+
+  if (!Number.isInteger(hh) || !Number.isInteger(mm)) return fallback
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return fallback
+
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+
+function getCurrentEATHHMM() {
+  const now = new Date(Date.now() + 3 * 60 * 60 * 1000)
+  const hh = String(now.getUTCHours()).padStart(2, '0')
+  const mm = String(now.getUTCMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function isTimeWithinWindow(current, start, end) {
+  if (start === end) return false
+  if (start < end) return current >= start && current < end
+  return current >= start || current < end
+}
+
+function isPaymentInactivePeriod() {
+  return isTimeWithinWindow(getCurrentEATHHMM(), INACTIVE_START_EAT, INACTIVE_END_EAT)
+}
 
 function loadStore() {
   try {
@@ -291,6 +325,19 @@ async function notifyAdmin(order) {
   await sendTelegramMessage(text)
 }
 
+async function notifyAdminFailure(order, state) {
+  const text = [
+    'Payment was not completed',
+    `Order ID: ${order.id}`,
+    `Product: ${order.productName}`,
+    `Amount: Ksh. ${order.amount}`,
+    `Payment number: ${order.paymentPhone}`,
+    `Status: ${state}`,
+  ].join('\n')
+
+  await sendTelegramMessage(text)
+}
+
 function stopStatusPolling(apiRef) {
   if (activePollers[apiRef]) {
     clearInterval(activePollers[apiRef])
@@ -326,7 +373,10 @@ async function markOrderPaymentComplete(orderId, invoiceId, source) {
   }
 }
 
-function markOrderPaymentFailed(orderId, state) {
+async function markOrderPaymentFailed(orderId, state) {
+  const order = getOrder(orderId)
+  if (!order) return
+
   let status = ORDER_STATUS.PAYMENT_FAILED
   if (state === 'CANCELLED') status = ORDER_STATUS.PAYMENT_CANCELLED
   if (state === 'EXPIRED') status = ORDER_STATUS.PAYMENT_EXPIRED
@@ -335,6 +385,17 @@ function markOrderPaymentFailed(orderId, state) {
     paymentState: state,
     status,
   })
+
+  const updated = getOrder(orderId)
+
+  if (updated && !updated.failureNotifiedAt) {
+    try {
+      await notifyAdminFailure(updated, state)
+      upsertOrder(orderId, { failureNotifiedAt: Date.now() })
+    } catch (err) {
+      console.error('Admin failure notification failed:', err.message)
+    }
+  }
 }
 
 function startStatusPolling(orderId, apiRef, invoiceId) {
@@ -368,7 +429,7 @@ function startStatusPolling(orderId, apiRef, invoiceId) {
 
       if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(state)) {
         stopStatusPolling(apiRef)
-        markOrderPaymentFailed(orderId, state)
+        await markOrderPaymentFailed(orderId, state)
       }
     } catch (err) {
       console.error('Status polling failed:', err.message)
@@ -419,6 +480,12 @@ app.post('/api/checkout', async (req, res) => {
   console.log('Body:', req.body)
 
   try {
+    if (isPaymentInactivePeriod()) {
+      return res.status(403).json({
+        error: `Payments are currently unavailable between ${INACTIVE_START_EAT} and ${INACTIVE_END_EAT} EAT. Please try again after ${INACTIVE_END_EAT} EAT.`,
+      })
+    }
+
     const { productId, paymentPhone } = req.body
 
     const product = findProductById(productId)
@@ -541,7 +608,7 @@ app.post('/api/delivery-details', async (req, res) => {
       orderId: updated.id,
       status: updated.status,
       whatsappLink: `https://wa.me/${BUSINESS_WHATSAPP_NUMBER}?text=${encodeURIComponent(
-        `Hello, I have completed payment.\nOrder ID: ${updated.id}\nProduct: ${updated.productName}`,
+        `Hello, I have completed payment and I am ready to receive my logins.\nOrder ID: ${updated.id}\nProduct: ${updated.productName}`,
       )}`,
     })
   } catch (err) {
@@ -612,7 +679,7 @@ app.post('/intasend/webhook', (req, res) => {
       }
 
       if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(state)) {
-        markOrderPaymentFailed(order.id, state)
+        await markOrderPaymentFailed(order.id, state)
       }
     } catch (err) {
       console.error('Webhook processing error:', err.message)
@@ -631,6 +698,10 @@ app.get('/health', (req, res) => {
     secretKeyLooksValid: String(INTASEND_SECRET_KEY || '').startsWith('ISSecretKey_'),
     publishableKeyPresent: Boolean(INTASEND_PUBLISHABLE_KEY),
     publishableKeyLooksValid: String(INTASEND_PUBLISHABLE_KEY || '').startsWith('ISPubKey_'),
+    inactiveStartEAT: INACTIVE_START_EAT,
+    inactiveEndEAT: INACTIVE_END_EAT,
+    currentTimeEAT: getCurrentEATHHMM(),
+    paymentsInactiveNowEAT: isPaymentInactivePeriod(),
   })
 })
 
@@ -645,4 +716,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || 'none configured'}`)
+  console.log(`Inactive payments window (EAT): ${INACTIVE_START_EAT} - ${INACTIVE_END_EAT}`)
 })
