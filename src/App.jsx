@@ -73,26 +73,37 @@ export default function App() {
 
       <section className="hero relative">
         <div className="container-narrow py-10 sm:py-16">
-          <div className="inline-block rounded-2xl bg-white/80 dark:bg-white/90 backdrop-blur px-4 sm:px-6 py-6 shadow">
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-black tracking-tight">
+          <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-6 shadow max-w-5xl">
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-black dark:text-white tracking-tight">
               Welcome to the JohnKaptain Academic Tools Hub
             </h1>
 
-            <p className="mt-3 text-black/80 text-base sm:text-lg leading-relaxed max-w-3xl">
-              JohnKaptain Academic Tools Hub is a home for academic tools and services for
-              students, researchers, and online workers. Browse AI humanizers, content support,
-              Turnitin guidance, training resources, and other useful academic services in one
-              place.
+            <p className="mt-3 text-gray-800 dark:text-gray-200 text-base sm:text-lg max-w-3xl leading-relaxed">
+              Academic tools and services for students, researchers, and online workers.
             </p>
 
-            <p className="mt-3 text-black/80 text-base sm:text-lg">
-              Enjoy 15% Referral Bonus on each Member Referred to Our Services
-            </p>
+            <details className="mt-4 rounded-xl bg-gray-50 dark:bg-slate-800 px-4 py-3">
+              <summary className="cursor-pointer font-medium text-gray-900 dark:text-gray-100">
+                More about this site
+              </summary>
 
-            <p className="mt-2 text-black/70 text-sm sm:text-base max-w-3xl">
-              Search for JohnKaptain Academic Tools Hub to quickly find our website and explore
-              available tools and services.
-            </p>
+              <div className="mt-3 space-y-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
+                <p>
+                  JohnKaptain Academic Tools Hub helps users discover AI humanizers,
+                  content support, Turnitin guidance, training resources, and other useful
+                  academic services.
+                </p>
+
+                <p>
+                  Search for JohnKaptain Academic Tools Hub to quickly find our website and
+                  explore available tools and services.
+                </p>
+
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  Enjoy 15% Referral Bonus on each Member Referred to Our Services
+                </p>
+              </div>
+            </details>
           </div>
 
           <div className="mt-6">
@@ -100,7 +111,7 @@ export default function App() {
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Search academic tools and services..."
-              className="w-full sm:w-96 rounded-2xl px-4 py-2 bg-white/95 outline-none shadow"
+              className="w-full sm:w-96 rounded-2xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-500 outline-none shadow border border-gray-200"
             />
           </div>
         </div>
@@ -108,13 +119,17 @@ export default function App() {
 
       <main className="container-narrow">
         <section className="py-8">
-          <h2 className="text-2xl font-bold">About JohnKaptain Academic Tools Hub</h2>
-          <p className="mt-3 text-gray-700 dark:text-gray-300 max-w-4xl">
-            JohnKaptain Academic Tools Hub helps users discover academic tools, study support,
-            training resources, and digital services in a simple searchable hub. The platform is
-            designed to make it easier to access academic solutions, research support, and helpful
-            online services from one place.
-          </p>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 shadow px-5 sm:px-6 py-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              About JohnKaptain Academic Tools Hub
+            </h2>
+            <p className="mt-3 text-gray-800 dark:text-gray-200 max-w-4xl leading-relaxed">
+              JohnKaptain Academic Tools Hub helps users discover academic tools, study
+              support, training resources, and digital services in a simple searchable hub.
+              The platform is designed to make it easier to access academic solutions,
+              research support, and helpful online services from one place.
+            </p>
+          </div>
         </section>
 
         {CATEGORIES.map(cat => (
