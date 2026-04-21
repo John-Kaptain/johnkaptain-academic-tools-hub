@@ -1,72 +1,96 @@
 import React, { useEffect, useState } from 'react'
 
-export default function Navbar({ sections, activeId, onJump, onToggleTheme, theme }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+export default function Navbar({
+  sections = [],
+  activeId,
+  onJump,
+  onToggleTheme,
+  theme = 'light',
+}) {
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setMenuOpen(false)
-      }
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setOpen(false)
     }
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   const handleJump = id => {
     onJump(id)
-    setMenuOpen(false)
+    setOpen(false)
   }
 
   return (
-    <header className="sticky top-0 z-40 text-white">
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 border-b border-white/10 backdrop-blur shadow">
-        <div className="container-narrow flex items-center gap-3 py-3">
-          <div className="text-lg sm:text-xl font-extrabold tracking-tight leading-tight">
-            JohnKaptain Academic Tools Hub
-          </div>
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white shadow-lg">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3 py-4">
+          <button
+            type="button"
+            onClick={() => handleJump(sections[0]?.id || 'top')}
+            className="text-left"
+          >
+            <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+              JohnKaptain Academic
+            </span>
+            <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+              Tools Hub
+            </span>
+          </button>
 
-          {/* desktop nav */}
-          <nav className="ml-auto hidden md:flex flex-wrap gap-2">
-            {sections.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => handleJump(s.id)}
-                className={
-                  'px-3 py-1 rounded-full text-sm transition ' +
-                  (activeId === s.id ? 'bg-white/30 shadow-sm' : 'hover:bg-white/15')
-                }
-              >
-                {s.title}
-              </button>
-            ))}
-          </nav>
+          <div className="hidden lg:flex items-center gap-3">
+            <nav className="flex flex-wrap items-center justify-end gap-2">
+              {sections.map(section => {
+                const active = activeId === section.id
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => handleJump(section.id)}
+                    className={`rounded-full px-4 py-2 text-sm xl:text-base font-medium transition ${
+                      active
+                        ? 'bg-white/25 text-white shadow'
+                        : 'text-white/95 hover:bg-white/15'
+                    }`}
+                  >
+                    {section.title}
+                  </button>
+                )
+              })}
+            </nav>
 
-          {/* right controls */}
-          <div className="ml-auto md:ml-2 flex items-center gap-2">
             <button
               type="button"
               onClick={onToggleTheme}
-              className="rounded-2xl px-3 py-1 text-sm font-semibold bg-green-500 text-white hover:bg-green-600 shadow transition"
-              title="Toggle theme"
+              className="rounded-2xl bg-green-500 px-4 py-3 font-bold text-white shadow hover:bg-green-600 transition"
             >
-              {theme === 'dark' ? 'Light' : 'Dark'} Mode
+              {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
             </button>
+          </div>
 
-            {/* mobile hamburger */}
+          <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
-              onClick={() => setMenuOpen(v => !v)}
-              className="md:hidden rounded-xl p-2 bg-white/10 hover:bg-white/20 transition"
-              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={menuOpen}
+              onClick={onToggleTheme}
+              className="rounded-xl bg-green-500 px-3 py-2 text-sm font-bold text-white shadow hover:bg-green-600 transition"
+              aria-label="Toggle theme"
             >
-              {menuOpen ? (
+              {theme === 'dark' ? 'Dark' : 'Light'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOpen(v => !v)}
+              className="rounded-xl bg-white/10 p-2 hover:bg-white/20 transition"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+            >
+              {open ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -77,7 +101,7 @@ export default function Navbar({ sections, activeId, onJump, onToggleTheme, them
               ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
+                  className="h-7 w-7"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -90,25 +114,28 @@ export default function Navbar({ sections, activeId, onJump, onToggleTheme, them
           </div>
         </div>
 
-        {/* mobile dropdown menu */}
-        {menuOpen && (
-          <div className="md:hidden container-narrow pb-3">
-            <div className="rounded-2xl bg-white/10 backdrop-blur p-2 flex flex-col gap-2">
-              {sections.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => handleJump(s.id)}
-                  className={
-                    'w-full text-left px-3 py-2 rounded-xl text-sm transition ' +
-                    (activeId === s.id
-                      ? 'bg-white text-blue-700 shadow-sm font-semibold'
-                      : 'text-white hover:bg-white/15')
-                  }
-                >
-                  {s.title}
-                </button>
-              ))}
+        {open && (
+          <div className="lg:hidden pb-4">
+            <div className="rounded-2xl bg-white/10 backdrop-blur p-3 shadow-md">
+              <nav className="flex flex-col gap-2">
+                {sections.map(section => {
+                  const active = activeId === section.id
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => handleJump(section.id)}
+                      className={`w-full rounded-xl px-4 py-3 text-left font-medium transition ${
+                        active
+                          ? 'bg-white text-blue-700 shadow'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      {section.title}
+                    </button>
+                  )
+                })}
+              </nav>
             </div>
           </div>
         )}
