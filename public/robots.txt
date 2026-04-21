@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://john-kaptain.github.io/johnkaptain-academic-tools-hub/sitemap.xml

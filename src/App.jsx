@@ -77,8 +77,21 @@ export default function App() {
             <h1 className="text-3xl sm:text-5xl font-extrabold text-black tracking-tight">
               Welcome to the JohnKaptain Academic Tools Hub
             </h1>
+
+            <p className="mt-3 text-black/80 text-base sm:text-lg leading-relaxed max-w-3xl">
+              JohnKaptain Academic Tools Hub is a home for academic tools and services for
+              students, researchers, and online workers. Browse AI humanizers, content support,
+              Turnitin guidance, training resources, and other useful academic services in one
+              place.
+            </p>
+
             <p className="mt-3 text-black/80 text-base sm:text-lg">
               Enjoy 15% Referral Bonus on each Member Referred to Our Services
+            </p>
+
+            <p className="mt-2 text-black/70 text-sm sm:text-base max-w-3xl">
+              Search for JohnKaptain Academic Tools Hub to quickly find our website and explore
+              available tools and services.
             </p>
           </div>
 
@@ -86,7 +99,7 @@ export default function App() {
             <input
               value={q}
               onChange={e => setQ(e.target.value)}
-              placeholder="Search services..."
+              placeholder="Search academic tools and services..."
               className="w-full sm:w-96 rounded-2xl px-4 py-2 bg-white/95 outline-none shadow"
             />
           </div>
@@ -94,6 +107,16 @@ export default function App() {
       </section>
 
       <main className="container-narrow">
+        <section className="py-8">
+          <h2 className="text-2xl font-bold">About JohnKaptain Academic Tools Hub</h2>
+          <p className="mt-3 text-gray-700 dark:text-gray-300 max-w-4xl">
+            JohnKaptain Academic Tools Hub helps users discover academic tools, study support,
+            training resources, and digital services in a simple searchable hub. The platform is
+            designed to make it easier to access academic solutions, research support, and helpful
+            online services from one place.
+          </p>
+        </section>
+
         {CATEGORIES.map(cat => (
           <section key={cat.id} id={cat.id} className={`py-10 rounded-2xl ${sectionBg[cat.id]}`}>
             <h2 className="section-title">{cat.title}</h2>
