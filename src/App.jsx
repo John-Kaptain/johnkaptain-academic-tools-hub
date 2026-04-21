@@ -90,13 +90,8 @@ export default function App() {
               <div className="mt-3 space-y-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                 <p>
                   JohnKaptain Academic Tools Hub helps users discover AI humanizers,
-                  content support, Turnitin guidance, training resources, and other useful
-                  academic services.
-                </p>
-
-                <p>
-                  Search for JohnKaptain Academic Tools Hub to quickly find our website and
-                  explore available tools and services.
+                  content generation support, Turnitin guidance, training resources, and other
+                  useful academic services.
                 </p>
 
                 <p className="font-medium text-gray-900 dark:text-gray-100">
@@ -124,10 +119,10 @@ export default function App() {
               About JohnKaptain Academic Tools Hub
             </h2>
             <p className="mt-3 text-gray-800 dark:text-gray-200 max-w-4xl leading-relaxed">
-              JohnKaptain Academic Tools Hub helps users discover academic tools, study
-              support, training resources, and digital services in a simple searchable hub.
-              The platform is designed to make it easier to access academic solutions,
-              research support, and helpful online services from one place.
+              JohnKaptain Academic Tools Hub helps users discover academic tools, study support,
+              training resources, and digital services in a simple searchable hub. The platform
+              is designed to make it easier to access academic solutions, research support, and
+              helpful online services from one place.
             </p>
           </div>
         </section>
