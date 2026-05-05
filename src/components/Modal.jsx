@@ -3,6 +3,9 @@ import React, { useEffect, useRef, useState } from 'react'
 const BUSINESS_WHATSAPP_E164 = '254701730921'
 const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
 
+const WHATSAPP_REMINDER =
+  'After payment, please enter your WhatsApp number as requested so we can complete your order.'
+
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -81,6 +84,15 @@ function linkifyText(text) {
   return parts
 }
 
+function cleanDescription(description) {
+  if (!description) return ''
+
+  return description
+    .replace(WHATSAPP_REMINDER, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export default function Modal({ open, item, onClose }) {
   const [step, setStep] = useState('payment')
   const [paymentPhone, setPaymentPhone] = useState('')
@@ -119,6 +131,8 @@ export default function Modal({ open, item, onClose }) {
   }, [])
 
   if (!open || !item) return null
+
+  const itemDescription = cleanDescription(item.description)
 
   async function startCheckout(e) {
     e.preventDefault()
@@ -235,10 +249,18 @@ export default function Modal({ open, item, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
       <div className="relative card max-w-lg w-full">
         <h3 className="text-xl font-bold">{item.name}</h3>
 
-        <p className="mt-2 text-gray-600 dark:text-gray-300">{linkifyText(item.description)}</p>
+        <p className="mt-2 text-gray-600 dark:text-gray-300">
+          {linkifyText(itemDescription)}
+        </p>
+
+        <p className="mt-3 font-semibold italic text-red-600 dark:text-red-400">
+          {WHATSAPP_REMINDER}
+        </p>
+
         <p className="mt-1 font-semibold">{`Ksh. ${item.price}`}</p>
 
         {step === 'payment' && (
