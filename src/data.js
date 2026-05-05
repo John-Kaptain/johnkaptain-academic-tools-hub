@@ -9,20 +9,20 @@ export const CATEGORIES = [
     title: 'AI Humanizers',
     items: [
       {
-        id: 'stealthwriter-premium-3',
-        name: 'Stealthwriter Premium Plan (3 Users)',
+        id: 'stealthwriter-pro',
+        name: 'Stealthwriter Pro Plan',
         price: 1700,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5000 words per request with unlimited Ghost Pro humanizations and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription.',
+          'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.1 humanizations every 24 hours, resetting at 3 a.m., and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
-        id: 'stealthwriter-basic-3',
-        name: 'Stealthwriter Basic Plan (3Users)',
+        id: 'stealthwriter-starter',
+        name: 'Stealthwriter Starter Plan',
         price: 1100,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 2000 words per request with 20 Ghost Pro humanizations per day and unlimited Ghost mini Humanizations. Verification is through Google. Monthly subscription',
+          'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.1 humanizations every 24 hours and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
         id: 'ryne-ai',
@@ -115,15 +115,6 @@ export const CATEGORIES = [
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRINhrlO336s3xS3CkdAugNMKXLm1YgmMPu0w&s',
         description:
           'Purchase a link with any number of slots with the minimum no minimum number, each slot allowing a single document check. Each slot cost ksh. 100. The link is exclusively for your use and has a 30 days validity.',
-      },
-      {
-        id: 'gptzero-ai-reports',
-        name: 'GPTZero AI Reports',
-        price: 40,
-        image:
-          'https://gptzero.me/news/content/images/2024/12/GPTZero-Confidence-Score-Uncertain.png',
-        description:
-          'Share a file and get GptZero AI-detection report in minimal time possible. You can also autogenerate the reports from telegram bot here: https://t.me/KaptainTurnitinBot.',
       },
       {
         id: 'quillbot-premium',
