@@ -22,7 +22,7 @@ export const CATEGORIES = [
         price: 1100,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.2 Pro and legacy humanizations every 24 hours and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
+          'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.2 Pro and legacy humanizations every 24 hours REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
         id: 'ryne-ai',
