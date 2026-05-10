@@ -9,12 +9,12 @@ export const CATEGORIES = [
     title: 'AI Humanizers',
     items: [
       {
-        id: 'stealthwriter-pro',
-        name: 'Stealthwriter Pro Plan',
+        id: 'stealthwriter-plus',
+        name: 'Stealthwriter Plus Plan',
         price: 1700,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.1 humanizations every 24 hours, resetting at 3 a.m., and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
+          'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m., and REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
         id: 'stealthwriter-starter',
@@ -22,7 +22,7 @@ export const CATEGORIES = [
         price: 1100,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.1 humanizations every 24 hours and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
+          'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.2 Pro and legacy humanizations every 24 hours and unlimited Ghost 4.6 humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
         id: 'ryne-ai',
@@ -284,7 +284,7 @@ export const CATEGORIES = [
       {
         id: 'dstv',
         name: 'DSTV Premium',
-        price: 1800,
+        price: 2000,
         image:
           'https://www.sahomeowner.co.za/wp-content/uploads/2017/12/DStv-Premium-Logo-on-Blue-Tag-RGB-HR-1.jpg',
         description:
