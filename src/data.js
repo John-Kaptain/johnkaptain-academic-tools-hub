@@ -9,12 +9,12 @@ export const CATEGORIES = [
     title: 'AI Humanizers',
     items: [
       {
-        id: 'stealthwriter-plus',
-        name: 'Stealthwriter Plus Plan',
-        price: 1700,
+        id: 'stealthwriter-pro',
+        name: 'Stealthwriter Pro Plan',
+        price: 1800,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m., and REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
+          'Humanizes up to 5,000 words per input. Includes 350 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m., and REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription. After payment, please enter your WhatsApp number as requested so we can complete your order.',
       },
       {
         id: 'stealthwriter-starter',
@@ -101,11 +101,11 @@ export const CATEGORIES = [
       {
         id: 'turnitin-reports',
         name: 'Turnitin Reports',
-        price: 135,
+        price: 130,
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
         description:
-          'Share a file and get both AI and plagiarism reports in minimal time. Click the Telegram bot link to join the bot for autogeneration of the reports: https://t.me/KaptainTurnitinBot.',
+          'Share a file and get both AI and plagiarism reports in minimal time. Click the Telegram bot link to join the bot for autogeneration of the reports with possibility for Discounts: https://t.me/KaptainTurnitinBot.',
       },
       {
         id: 'turnitin-slots-1',
