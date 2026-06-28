@@ -1,6 +1,6 @@
-﻿const PRODUCTS = [
-  { id: 'stealthwriter-pro', name: 'Stealthwriter Plus Plan', price: 1700 },
-  { id: 'stealthwriter-starter', name: 'Stealthwriter Starter Plan', price: 1100 },
+const PRODUCTS = [
+  { id: 'stealthwriter-premium-3', name: 'Stealthwriter Premium Plan (3 Users)', price: 1700 },
+  { id: 'stealthwriter-basic-3', name: 'Stealthwriter Basic Plan (3Users)', price: 1100 },
   { id: 'ryne-ai', name: 'Ryne AI', price: 1000 },
   { id: 'ai-removal-per-page', name: 'AI Removal Per Page', price: 50 },
 
@@ -9,7 +9,7 @@
   { id: 'deepseek', name: 'DeepSeek', price: 1000 },
   { id: 'supergrok', name: 'SuperGrok Premium', price: 1000 },
 
-  { id: 'turnitin-reports', name: 'Turnitin Reports', price: 130 },
+  { id: 'turnitin-reports', name: 'Turnitin Reports', price: 135 },
   { id: 'turnitin-slots-1', name: 'Turnitin Slots (1)', price: 140 },
   { id: 'gptzero-ai-reports', name: 'GPTZero AI Reports', price: 40 },
   { id: 'quillbot-premium', name: 'Quillbot Premium', price: 200 },
@@ -30,7 +30,7 @@
   { id: 'us-numbers', name: 'US Numbers', price: 2000 },
 
   { id: 'netflix', name: 'Netflix Premium', price: 400 },
-  { id: 'dstv', name: 'DSTV Premium', price: 2000 },
+  { id: 'dstv', name: 'DSTV Premium', price: 1800 },
 
   { id: 'training', name: 'Academic Writing Training', price: 2500 },
 ]
