@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+﻿import React, { useEffect, useRef, useState } from 'react'
 
 const BUSINESS_WHATSAPP_E164 = '254701730921'
 const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
