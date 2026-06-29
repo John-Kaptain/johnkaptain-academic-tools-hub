@@ -88,6 +88,7 @@ function cleanDescription(description) {
   if (!description) return ''
 
   return description
+    .replace(OLD_WHATSAPP_REMINDER, '')
     .replace(WHATSAPP_REMINDER, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -376,3 +377,4 @@ export default function Modal({ open, item, onClose }) {
     </div>
   )
 }
+
