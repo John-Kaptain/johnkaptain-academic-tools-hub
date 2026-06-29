@@ -3,8 +3,8 @@
 const BUSINESS_WHATSAPP_E164 = '254701730921'
 const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
 
-const WHATSAPP_REMINDER =
-  'After payment, please enter your WhatsApp number as requested so we can complete your order.'
+const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
+const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
 
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -377,4 +377,5 @@ export default function Modal({ open, item, onClose }) {
     </div>
   )
 }
+
 
