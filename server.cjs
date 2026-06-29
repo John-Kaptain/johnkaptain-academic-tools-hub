@@ -93,6 +93,7 @@ function loadStore() {
       fs.writeFileSync(STORE_FILE, JSON.stringify({}, null, 2), 'utf8')
       return
     }
+
     orders = JSON.parse(fs.readFileSync(STORE_FILE, 'utf8'))
   } catch {
     orders = {}
@@ -109,6 +110,7 @@ function upsertOrder(orderId, patch) {
     ...patch,
     updatedAt: Date.now(),
   }
+
   saveStore()
   return orders[orderId]
 }
@@ -133,6 +135,32 @@ function findOrderByInvoiceId(invoiceId) {
   )
 }
 
+function extractOrderIdFromApiRef(apiRef) {
+  const match = String(apiRef || '').match(/PAY_(ORD_\d+_\d+)_/)
+  return match ? match[1] : null
+}
+
+function findOrderFromPaymentRefs(apiRef, invoiceId) {
+  let order = null
+
+  if (apiRef) {
+    order = findOrderByApiRef(apiRef)
+  }
+
+  if (!order && invoiceId) {
+    order = findOrderByInvoiceId(invoiceId)
+  }
+
+  if (!order && apiRef) {
+    const orderId = extractOrderIdFromApiRef(apiRef)
+    if (orderId) {
+      order = getOrder(orderId)
+    }
+  }
+
+  return order
+}
+
 function createOrderId() {
   return `ORD_${Date.now()}_${Math.floor(Math.random() * 100000)}`
 }
@@ -144,14 +172,17 @@ function createPaymentRef(orderId) {
 function normalizePhoneTo254(phoneRaw) {
   const t = String(phoneRaw || '').trim().replace(/\s+/g, '')
   if (!t) return null
+
   if (t.startsWith('+')) {
     const x = t.slice(1)
     if (/^254(?:7|1)\d{8}$/.test(x)) return x
     return null
   }
+
   if (/^254(?:7|1)\d{8}$/.test(t)) return t
   if (/^0(?:7|1)\d{8}$/.test(t)) return '254' + t.slice(1)
   if (/^(?:7|1)\d{8}$/.test(t)) return '254' + t
+
   return null
 }
 
@@ -159,12 +190,28 @@ function extractApiRef(payload) {
   return (
     payload?.api_ref ||
     payload?.apiRef ||
+    payload?.tracking_id ||
+    payload?.trackingId ||
     payload?.invoice?.api_ref ||
     payload?.invoice?.apiRef ||
+    payload?.invoice?.tracking_id ||
+    payload?.invoice?.trackingId ||
     payload?.data?.api_ref ||
     payload?.data?.apiRef ||
+    payload?.data?.tracking_id ||
+    payload?.data?.trackingId ||
+    payload?.data?.invoice?.api_ref ||
+    payload?.data?.invoice?.apiRef ||
+    payload?.data?.invoice?.tracking_id ||
+    payload?.data?.invoice?.trackingId ||
     payload?.payload?.api_ref ||
     payload?.payload?.apiRef ||
+    payload?.payload?.tracking_id ||
+    payload?.payload?.trackingId ||
+    payload?.payload?.invoice?.api_ref ||
+    payload?.payload?.invoice?.apiRef ||
+    payload?.payload?.invoice?.tracking_id ||
+    payload?.payload?.invoice?.trackingId ||
     null
   )
 }
@@ -173,19 +220,19 @@ function extractInvoiceId(payload) {
   return (
     payload?.invoice_id ||
     payload?.invoiceId ||
-    payload?.id ||
     payload?.invoice?.invoice_id ||
     payload?.invoice?.invoiceId ||
-    payload?.invoice?.id ||
     payload?.data?.invoice_id ||
     payload?.data?.invoiceId ||
     payload?.data?.invoice?.invoice_id ||
     payload?.data?.invoice?.invoiceId ||
-    payload?.data?.invoice?.id ||
     payload?.payload?.invoice_id ||
     payload?.payload?.invoiceId ||
     payload?.payload?.invoice?.invoice_id ||
     payload?.payload?.invoice?.invoiceId ||
+    payload?.id ||
+    payload?.invoice?.id ||
+    payload?.data?.invoice?.id ||
     payload?.payload?.invoice?.id ||
     null
   )
@@ -195,16 +242,28 @@ function extractState(payload) {
   return (
     payload?.state ||
     payload?.status ||
+    payload?.payment_state ||
+    payload?.paymentState ||
     payload?.invoice?.state ||
     payload?.invoice?.status ||
+    payload?.invoice?.payment_state ||
+    payload?.invoice?.paymentState ||
     payload?.data?.state ||
     payload?.data?.status ||
+    payload?.data?.payment_state ||
+    payload?.data?.paymentState ||
     payload?.data?.invoice?.state ||
     payload?.data?.invoice?.status ||
+    payload?.data?.invoice?.payment_state ||
+    payload?.data?.invoice?.paymentState ||
     payload?.payload?.state ||
     payload?.payload?.status ||
+    payload?.payload?.payment_state ||
+    payload?.payload?.paymentState ||
     payload?.payload?.invoice?.state ||
     payload?.payload?.invoice?.status ||
+    payload?.payload?.invoice?.payment_state ||
+    payload?.payload?.invoice?.paymentState ||
     null
   )
 }
@@ -215,17 +274,30 @@ function normalizePaymentState(raw) {
   if (['COMPLETE', 'COMPLETED', 'SUCCESS', 'SUCCEEDED', 'PAID', 'TS100'].includes(s)) {
     return 'COMPLETE'
   }
+
   if (['FAILED', 'FAIL', 'ERROR', 'TF103', 'TF106'].includes(s)) {
     return 'FAILED'
   }
+
   if (['CANCELLED', 'CANCELED', 'TC108'].includes(s)) {
     return 'CANCELLED'
   }
+
   if (['EXPIRED', 'TIMEOUT', 'TIMEDOUT'].includes(s)) {
     return 'EXPIRED'
   }
+
   if (
-    ['PENDING', 'PROCESSING', 'IN_PROGRESS', 'INPROGRESS', 'TP101', 'TP102', 'BP101', 'BP103'].includes(s)
+    [
+      'PENDING',
+      'PROCESSING',
+      'IN_PROGRESS',
+      'INPROGRESS',
+      'TP101',
+      'TP102',
+      'BP101',
+      'BP103',
+    ].includes(s)
   ) {
     return 'PENDING'
   }
@@ -530,14 +602,16 @@ app.post('/api/checkout', async (req, res) => {
       paymentState: state,
     })
 
-    if (invoiceId) {
+    if (state === 'COMPLETE') {
+      await markOrderPaymentComplete(orderId, invoiceId, 'checkout-response')
+    } else if (invoiceId) {
       startStatusPolling(orderId, apiRef, invoiceId)
     }
 
     return res.json({
       ok: true,
       orderId,
-      status: ORDER_STATUS.PAYMENT_PENDING,
+      status: getOrder(orderId)?.status || ORDER_STATUS.PAYMENT_PENDING,
     })
   } catch (err) {
     console.error('Checkout error message:', err.message)
@@ -551,10 +625,31 @@ app.post('/api/checkout', async (req, res) => {
   }
 })
 
-app.get('/api/payment-status/:orderId', (req, res) => {
-  const order = getOrder(req.params.orderId)
+app.get('/api/payment-status/:orderId', async (req, res) => {
+  let order = getOrder(req.params.orderId)
+
   if (!order) {
     return res.status(404).json({ error: 'Order not found' })
+  }
+
+  if (order.paymentState !== 'COMPLETE' && order.invoiceId) {
+    try {
+      const response = await intasendCheckPaymentStatus({ invoice_id: order.invoiceId })
+      const state = normalizePaymentState(extractState(response))
+      const returnedInvoiceId = extractInvoiceId(response) || order.invoiceId
+
+      if (state === 'COMPLETE') {
+        await markOrderPaymentComplete(order.id, returnedInvoiceId, 'frontend-status-check')
+      }
+
+      if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(state)) {
+        await markOrderPaymentFailed(order.id, state)
+      }
+
+      order = getOrder(req.params.orderId) || order
+    } catch (err) {
+      console.error('Payment status live check failed:', err.message)
+    }
   }
 
   return res.json({
@@ -660,9 +755,23 @@ app.post('/intasend/webhook', (req, res) => {
       const invoiceId = extractInvoiceId(payload)
       const state = normalizePaymentState(extractState(payload))
 
-      let order = null
-      if (apiRef) order = findOrderByApiRef(apiRef)
-      if (!order && invoiceId) order = findOrderByInvoiceId(invoiceId)
+      let order = findOrderFromPaymentRefs(apiRef, invoiceId)
+
+      if (!order && invoiceId) {
+        try {
+          const statusResponse = await intasendCheckPaymentStatus({ invoice_id: invoiceId })
+          const statusApiRef = extractApiRef(statusResponse)
+          const statusInvoiceId = extractInvoiceId(statusResponse) || invoiceId
+
+          order = findOrderFromPaymentRefs(statusApiRef || apiRef, statusInvoiceId)
+
+          if (statusApiRef) {
+            apiRef = statusApiRef
+          }
+        } catch (err) {
+          console.error('Webhook fallback status lookup failed:', err.message)
+        }
+      }
 
       if (!order) {
         console.log(
@@ -674,7 +783,7 @@ app.post('/intasend/webhook', (req, res) => {
       }
 
       if (state === 'COMPLETE') {
-        await markOrderPaymentComplete(order.id, invoiceId, 'webhook')
+        await markOrderPaymentComplete(order.id, invoiceId || order.invoiceId, 'webhook')
         return
       }
 
