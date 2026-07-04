@@ -1,4 +1,4 @@
-require('dotenv').config()
+﻿require('dotenv').config()
 
 const fs = require('fs')
 const path = require('path')
@@ -40,9 +40,9 @@ const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
 const INACTIVE_START_EAT = normalizeHHMM(process.env.INACTIVE_START_EAT, '00:00')
 const INACTIVE_END_EAT = normalizeHHMM(process.env.INACTIVE_END_EAT, '06:00')
 
-const STORE_FILE = path.join(__dirname, 'orders.store.json')
-const STATUS_POLL_INTERVAL_MS = 10000
-const STATUS_POLL_MAX_ATTEMPTS = 48
+const STORE_FILE = process.env.ORDER_STORE_FILE ? path.resolve(process.env.ORDER_STORE_FILE) : path.join(__dirname, 'orders.store.json')
+const STATUS_POLL_INTERVAL_MS = 3000
+const STATUS_POLL_MAX_ATTEMPTS = 120
 
 const ORDER_STATUS = {
   PAYMENT_PENDING: 'PAYMENT_PENDING',
@@ -89,6 +89,10 @@ function isPaymentInactivePeriod() {
 
 function loadStore() {
   try {
+    const storeDir = path.dirname(STORE_FILE)
+    if (!fs.existsSync(storeDir)) {
+      fs.mkdirSync(storeDir, { recursive: true })
+    }
     if (!fs.existsSync(STORE_FILE)) {
       fs.writeFileSync(STORE_FILE, JSON.stringify({}, null, 2), 'utf8')
       return
@@ -101,6 +105,11 @@ function loadStore() {
 }
 
 function saveStore() {
+  const storeDir = path.dirname(STORE_FILE)
+  if (!fs.existsSync(storeDir)) {
+    fs.mkdirSync(storeDir, { recursive: true })
+  }
+
   fs.writeFileSync(STORE_FILE, JSON.stringify(orders, null, 2), 'utf8')
 }
 
@@ -811,6 +820,10 @@ app.get('/health', (req, res) => {
     inactiveEndEAT: INACTIVE_END_EAT,
     currentTimeEAT: getCurrentEATHHMM(),
     paymentsInactiveNowEAT: isPaymentInactivePeriod(),
+    storeFile: STORE_FILE,
+    storeFileExists: fs.existsSync(STORE_FILE),
+    ordersLoaded: Object.keys(orders).length,
+    deployMarker: 'payment-final-fix-v1',
   })
 })
 

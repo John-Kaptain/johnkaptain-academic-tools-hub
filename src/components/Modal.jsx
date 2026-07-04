@@ -163,7 +163,7 @@ export default function Modal({ open, item, onClose }) {
 
   function startPolling(newOrderId) {
     let tries = 0
-    const maxTries = 60
+    const maxTries = 150
 
     if (pollRef.current) {
       clearInterval(pollRef.current)
@@ -221,7 +221,7 @@ export default function Modal({ open, item, onClose }) {
       } catch {
         setStatusMessage('Checking payment...')
       }
-    }, 5000)
+    }, 2000)
   }
 
   async function submitDeliveryDetails(e) {
@@ -377,5 +377,6 @@ export default function Modal({ open, item, onClose }) {
     </div>
   )
 }
+
 
 
