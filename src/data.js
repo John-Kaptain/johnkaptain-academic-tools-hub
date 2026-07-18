@@ -105,7 +105,7 @@ export const CATEGORIES = [
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
         description:
-          'Share your file and receive both AI and plagiarism reports in minimal time. For automated report generation and possible discounts, join the JK Turnitin Bot: https://t.me/JKTurnitinBot.',,
+          'Share your file and receive both AI and plagiarism reports in minimal time. For automated report generation and possible discounts, join the JK Turnitin Bot: https://t.me/JKTurnitinBot',
       },
       {
         id: 'turnitin-slots-1',
@@ -311,4 +311,6 @@ export const CATEGORIES = [
     ],
   },
 ]
+
+
 
