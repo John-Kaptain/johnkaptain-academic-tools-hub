@@ -14,7 +14,7 @@ export const CATEGORIES = [
         price: 1700,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
-          'Humanizes up to 5,000 words per input. Includes 350 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m., and REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription.',
+          'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m. Rehumanizing does not consume humanizations. Verification is through Google. Monthly subscription.',
       },
       {
         id: 'stealthwriter-starter',
@@ -105,7 +105,7 @@ export const CATEGORIES = [
         image:
           'https://guides.turnitin.com/hc/article_attachments/39150823413517',
         description:
-          'Share a file and get both AI and plagiarism reports in minimal time. Click the Telegram bot link to join the bot for autogeneration of the reports with possibility for Discounts: https://t.me/KaptainTurnitinBot.',
+          'Share your file and receive both AI and plagiarism reports in minimal time. For automated report generation and possible discounts, join the JK Turnitin Bot: https://t.me/JKTurnitinBot.',,
       },
       {
         id: 'turnitin-slots-1',

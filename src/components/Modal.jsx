@@ -31,6 +31,11 @@ function makeWhatsAppLink(orderId, itemName) {
 function getLinkLabel(url) {
   try {
     const u = new URL(url)
+
+    if (u.hostname === 't.me' && u.pathname === '/JKTurnitinBot') {
+      return 'JK Turnitin Bot'
+    }
+
     return u.hostname.replace(/^www\./, '')
   } catch {
     return url
