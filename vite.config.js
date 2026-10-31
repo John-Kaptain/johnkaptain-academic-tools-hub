@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/johnkaptain-academic-tools-hub/',
+  // Served at the root of the custom domain (public/CNAME).
+  base: '/',
   server: {
     proxy: {
       '/api': {
