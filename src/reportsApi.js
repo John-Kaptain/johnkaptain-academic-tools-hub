@@ -1,6 +1,9 @@
 // Client for the JK Turnitin Bot's website-orders API (the same service,
 // prices and report engine as the Telegram bot).
-export const REPORTS_API = String(import.meta.env.VITE_JK_REPORTS_API || '').replace(/\/+$/, '')
+// Override at build time with VITE_JK_REPORTS_API if the bot ever moves.
+export const REPORTS_API = String(
+  import.meta.env.VITE_JK_REPORTS_API || 'https://jk-turnitin-telegram-bot.onrender.com',
+).replace(/\/+$/, '')
 
 const STORAGE_KEY = 'jk-report-orders'
 
