@@ -9,7 +9,7 @@ export default function Card({ item, onOpen }) {
         className="aspect-video w-full rounded-xl object-cover"
       />
       <div className="mt-3 font-semibold">{item.name}</div>
-      <div className="text-gray-600 dark:text-gray-300">{`Ksh. ${item.price}`}</div>
+      <div className="text-gray-600 dark:text-gray-300">{`${item.priceFrom ? 'From ' : ''}Ksh. ${item.price}`}</div>
 
       <button className="btn btn-primary mt-4" onClick={() => onOpen(item)}>
         Buy Now

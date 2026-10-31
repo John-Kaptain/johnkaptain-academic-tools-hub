@@ -2,8 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import Card from './components/Card.jsx'
 import Modal from './components/Modal.jsx'
+import ReportsCheckout from './components/ReportsCheckout.jsx'
+import { reportsApi } from './reportsApi.js'
 import Footer from './components/Footer.jsx'
-import { CATEGORIES } from './data.js'
+import { CATEGORIES as ALL_CATEGORIES } from './data.js'
+
+// The Turnitin reports section leads the page.
+const REPORTS_SECTION = 'turnitin-detection'
+const REPORTS_ITEM = 'turnitin-reports'
+const CATEGORIES = [
+  ...ALL_CATEGORIES.filter(c => c.id === REPORTS_SECTION),
+  ...ALL_CATEGORIES.filter(c => c.id !== REPORTS_SECTION),
+]
 
 function useScrollSpy(ids) {
   const [active, setActive] = useState(ids[0] ?? null)
@@ -29,6 +39,23 @@ export default function App() {
   const sections = useMemo(() => CATEGORIES.map(c => ({ id: c.id, title: c.title })), [])
   const activeId = useScrollSpy(sections.map(s => s.id))
   const [modalItem, setModalItem] = useState(null)
+  const [reportsOpen, setReportsOpen] = useState(false)
+  const [reportsPrice, setReportsPrice] = useState(null)
+
+  // Live price from the JK Turnitin Bot (same as Telegram).
+  useEffect(() => {
+    reportsApi
+      .config()
+      .then(cfg => {
+        const prices = (cfg.services || []).map(s => s.price).filter(p => Number.isFinite(p))
+        if (prices.length) setReportsPrice(Math.min(...prices))
+      })
+      .catch(() => {})
+  }, [])
+
+  const openItem = item => (item.id === REPORTS_ITEM ? setReportsOpen(true) : setModalItem(item))
+  const withLivePrice = item =>
+    item.id === REPORTS_ITEM && reportsPrice !== null ? { ...item, price: reportsPrice, priceFrom: true } : item
   const [q, setQ] = useState('')
   const [theme, setTheme] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -130,9 +157,23 @@ export default function App() {
         {CATEGORIES.map(cat => (
           <section key={cat.id} id={cat.id} className={`py-10 rounded-2xl ${sectionBg[cat.id]}`}>
             <h2 className="section-title">{cat.title}</h2>
+            {cat.id === REPORTS_SECTION && (
+              <div className="mt-6 rounded-2xl bg-white dark:bg-slate-900 shadow px-5 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="text-lg font-bold">Get Turnitin AI &amp; Similarity reports</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Upload up to 10 documents, pay with M-Pesa and download your reports here — the same automated
+                    service and prices as the JK Turnitin Bot.
+                  </p>
+                </div>
+                <button className="btn btn-primary whitespace-nowrap" onClick={() => setReportsOpen(true)}>
+                  Check documents{reportsPrice !== null ? ` · from Ksh. ${reportsPrice}` : ''}
+                </button>
+              </div>
+            )}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {filterItems(cat.items).map(item => (
-                <Card key={item.id} item={item} onOpen={setModalItem} />
+                <Card key={item.id} item={withLivePrice(item)} onOpen={openItem} />
               ))}
             </div>
           </section>
@@ -142,6 +183,7 @@ export default function App() {
       <Footer />
 
       <Modal open={!!modalItem} item={modalItem} onClose={() => setModalItem(null)} />
+      <ReportsCheckout open={reportsOpen} onClose={() => setReportsOpen(false)} />
 
       <a
         href="https://wa.me/254701730921"
