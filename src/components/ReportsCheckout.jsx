@@ -19,7 +19,7 @@ function formatSize(bytes) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`
 }
 
-export default function ReportsCheckout({ open, onClose }) {
+export default function ReportsCheckout({ open, presetType, onClose }) {
   const [config, setConfig] = useState(null)
   const [configError, setConfigError] = useState('')
   const [files, setFiles] = useState([]) // { file, type, filter }
@@ -64,7 +64,8 @@ export default function ReportsCheckout({ open, onClose }) {
     }
     return list
   }, [config])
-  const defaultType = services[0]?.type || ''
+  // The card button the customer clicked decides the first choice.
+  const defaultType = services.find(s => s.type === presetType)?.type || services[0]?.type || ''
   const priceOf = type => services.find(s => s.type === type)?.price ?? null
   const total = files.reduce((sum, f) => sum + (priceOf(f.type) || 0), 0)
   const needsCode = files.some(f => services.find(s => s.type === f.type)?.needsCode)
@@ -169,6 +170,25 @@ export default function ReportsCheckout({ open, onClose }) {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  async function deleteFiles() {
+    if (!window.confirm('Delete your documents and reports from our server? This cannot be undone.')) return
+    setError('')
+    try {
+      const res = await reportsApi.deleteData(order.orderId, order.token)
+      setStatus(res.status)
+      forgetOrder(order.orderId)
+      setRecent(savedOrders())
+      clearInterval(pollRef.current)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  function forgetSaved(orderId) {
+    forgetOrder(orderId)
+    setRecent(savedOrders())
   }
 
   function openSaved(saved) {
@@ -376,8 +396,21 @@ export default function ReportsCheckout({ open, onClose }) {
                     <span className="text-sm text-blue-600 dark:text-blue-400">Download</span>
                   </a>
                 ))}
-                <p className="text-xs text-gray-500">Reports stay available here for 14 days.</p>
+                <p className="text-xs text-gray-500">
+                  Only this device can open this order. Reports are removed automatically after 14 days.
+                </p>
               </div>
+            )}
+
+            {stage === 'DELIVERED' && !status.deleted && (
+              <button className="btn btn-outline text-sm text-red-600" onClick={deleteFiles}>
+                🗑 Delete my documents and reports
+              </button>
+            )}
+            {status.deleted && (
+              <p className="rounded-xl bg-gray-50 dark:bg-slate-800 p-3 text-sm">
+                Your documents and reports have been deleted from our server.
+              </p>
             )}
 
             {status.messages?.length > 0 && (
@@ -403,9 +436,18 @@ export default function ReportsCheckout({ open, onClose }) {
             <div className="text-sm font-semibold">Your recent orders on this device</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {recent.map(o => (
-                <button key={o.orderId} className="btn btn-outline text-sm" onClick={() => openSaved(o)}>
-                  {o.orderId}
-                </button>
+                <span key={o.orderId} className="inline-flex items-center gap-1">
+                  <button className="btn btn-outline text-sm" onClick={() => openSaved(o)}>
+                    {o.orderId}
+                  </button>
+                  <button
+                    className="text-xs text-gray-500 hover:text-red-600"
+                    title="Remove from this device"
+                    onClick={() => forgetSaved(o.orderId)}
+                  >
+                    ✕
+                  </button>
+                </span>
               ))}
             </div>
           </div>

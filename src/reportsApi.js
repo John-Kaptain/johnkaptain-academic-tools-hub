@@ -38,6 +38,7 @@ export const reportsApi = {
   resend: (orderId, token, phone) =>
     call(`/api/web/orders/${orderId}/resend`, { method: 'POST', token, json: phone ? { phone } : {} }),
   cancel: (orderId, token) => call(`/api/web/orders/${orderId}/cancel`, { method: 'POST', token }),
+  deleteData: (orderId, token) => call(`/api/web/orders/${orderId}/delete`, { method: 'POST', token }),
   status: (orderId, token) => call(`/api/web/orders/${orderId}`, { token }),
   reportUrl: (orderId, token, reportId) =>
     `${REPORTS_API}/api/web/orders/${orderId}/reports/${reportId}?token=${encodeURIComponent(token)}`,

@@ -103,18 +103,9 @@ export const CATEGORIES = [
         name: 'Turnitin Reports',
         price: 130,
         image:
-          'https://guides.turnitin.com/hc/article_attachments/39150823413517',
+          'https://guides.turnitin.com/hc/article_attachments/47879733204749',
         description:
           'Share your file and receive both AI and plagiarism reports in minimal time. For automated report generation and possible discounts, join the JK Turnitin Bot: https://t.me/JKTurnitinBot',
-      },
-      {
-        id: 'turnitin-slots-1',
-        name: 'Turnitin Slots (1)',
-        price: 140,
-        image:
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRINhrlO336s3xS3CkdAugNMKXLm1YgmMPu0w&s',
-        description:
-          'Purchase a link with any number of slots with the minimum no minimum number, each slot allowing a single document check. Each slot cost ksh. 100. The link is exclusively for your use and has a 30 days validity.',
       },
       {
         id: 'quillbot-premium',
