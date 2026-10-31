@@ -30,8 +30,7 @@ export default function TurnitinCard({ config, onChoose }) {
           Upload your document, pay with M-Pesa and download your Turnitin reports right here.
         </p>
         <ul className="mt-2 space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
-          <li>✔ Up to {config?.maxFiles || 10} documents per order (PDF, DOCX, DOC, PPTX)</li>
-          <li>✔ References and bibliography excluded from AI detection</li>
+          <li>✔ Up to {config?.maxFiles || 10} documents per order (PDF, DOC or DOCX)</li>
         </ul>
 
         {unavailable ? (

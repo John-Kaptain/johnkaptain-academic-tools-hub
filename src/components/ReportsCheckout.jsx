@@ -78,7 +78,7 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
     for (const file of list) {
       const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
       if (!accepted.includes(ext)) {
-        setError(`${file.name}: only PDF, DOCX, DOC and PPTX are supported.`)
+        setError(`${file.name}: only PDF, DOC and DOCX files are supported.`)
         continue
       }
       if (file.size > (config?.maxFileBytes || 20 * 1024 * 1024)) {
@@ -268,7 +268,7 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
                 }}
               />
               <p className="mt-2 text-xs text-gray-500">
-                PDF, DOCX, DOC or PPTX · up to {config.maxFiles} documents · 20 MB each
+                PDF, DOC or DOCX · up to {config.maxFiles} documents · 20 MB each
               </p>
             </div>
 

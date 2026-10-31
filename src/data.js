@@ -112,7 +112,7 @@ export const CATEGORIES = [
         name: 'Quillbot Premium',
         price: 200,
         image:
-          'https://netflixmartbd.net/wp-content/uploads/2022/06/images-8.jpeg',
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuHFVtBIyWgp87QxBBbq3CNJ2mwD7dQgrH-fXvZJt3OtgS57gG9ntb1oI&s=10',
         description:
           'Paraphrasing for an unlimited number of words per request; suitable for similarity reduction and AI removal. Also checks AI-generated content. Monthly subscription.',
       },
@@ -268,7 +268,7 @@ export const CATEGORIES = [
         name: 'Netflix Premium',
         price: 400,
         image:
-          'https://w0.peakpx.com/wallpaper/134/43/HD-wallpaper-netflix-netflix-site.jpg',
+          'https://pageflows.com/media/logos/netflix.jpg',
         description:
           'Access to Ultra HD streaming on Netflix; cost applies per device connected. Monthly subscription.',
       },
