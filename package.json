@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://john-kaptain.github.io/johnkaptain-academic-tools-hub",
+  "homepage": "https://jkacademictoolshub.com",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

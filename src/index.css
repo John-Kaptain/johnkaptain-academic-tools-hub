@@ -17,3 +17,7 @@ html { scroll-behavior: smooth; }
   background-size: cover;
   background-position: center;
 }
+
+/* Section titles stay visible below the sticky menu when jumped to. */
+main section[id] { scroll-margin-top: 8.5rem; }
+@media (min-width: 768px) { main section[id] { scroll-margin-top: 12rem; } }
