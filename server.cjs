@@ -129,6 +129,26 @@ function saveStore() {
   fs.writeFileSync(STORE_FILE, JSON.stringify(orders, null, 2), 'utf8')
 }
 
+// Order records are small (no files: those stay on Telegram). Unpaid orders
+// are dropped after 36 h; paid orders keep their chat (logins) for 30 days.
+const UNPAID_ORDER_RETENTION_MS = 36 * 60 * 60 * 1000
+const PAID_ORDER_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+function pruneOrders(now = Date.now()) {
+  let removed = 0
+  for (const [id, order] of Object.entries(orders)) {
+    const created = Number(order.createdAt) || Number((/^ORD_(\d{12,})_/.exec(id) || [])[1]) || 0
+    if (!created) continue
+    const age = now - created
+    const paid = order.paymentState === 'COMPLETE'
+    if (age > (paid ? PAID_ORDER_RETENTION_MS : UNPAID_ORDER_RETENTION_MS)) {
+      delete orders[id]
+      removed += 1
+    }
+  }
+  if (removed) saveStore()
+  return removed
+}
+
 function upsertOrder(orderId, patch) {
   orders[orderId] = {
     ...(orders[orderId] || {}),
@@ -977,5 +997,10 @@ app.listen(PORT, () => {
   console.log(`Inactive payments window (EAT): ${INACTIVE_START_EAT} - ${INACTIVE_END_EAT}`)
   // Register now, then re-check every 30 minutes in case it was replaced.
   ensureTelegramWebhook(true)
+  const runPrune = () => { try { pruneOrders() } catch (err) { console.error('Order clean-up failed:', err.message) } }
+  runPrune()
+  setInterval(runPrune, 60 * 60 * 1000).unref()
   setInterval(ensureTelegramWebhook, 30 * 60 * 1000).unref()
 })
+
+module.exports = { pruneOrders }
