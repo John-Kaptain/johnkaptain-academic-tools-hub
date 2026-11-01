@@ -417,6 +417,7 @@ const shopChat = require('./shop-chat.cjs').createShopChat({
 
 async function notifyAdmin(order) {
   const text = [
+    '✅ PAYMENT COMPLETE — new website order',
     'New paid order ready for fulfillment',
     `Order ID: ${order.id}`,
     `Product: ${order.productName}`,
@@ -427,16 +428,30 @@ async function notifyAdmin(order) {
       ? `WhatsApp (optional contact): https://wa.me/${order.deliveryWhatsAppNumber}`
       : 'WhatsApp: not provided — use the website chat',
     '',
-    'Tap 💬 Reply (or swipe-reply) to send logins or files to the customer on the website.',
+    'Tap 💬 Reply to send logins, or 📎 Send files for documents — they appear on the customer\'s order page.',
   ].join('\n')
 
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return sendTelegramMessage(text)
   await shopChat.notifyAdmin(order.id, text)
 }
 
+// Details the customer adds after paying (optional WhatsApp / M-Pesa name).
+async function notifyAdminDetails(order) {
+  if (!order.deliveryWhatsAppNumber && !order.mpesaName) return
+  const text = [
+    'ℹ️ Customer details added',
+    `Order ID: ${order.id}`,
+    `Product: ${order.productName}`,
+    `M-Pesa name: ${order.mpesaName || 'Not provided'}`,
+    order.deliveryWhatsAppNumber ? `WhatsApp (optional contact): https://wa.me/${order.deliveryWhatsAppNumber}` : 'WhatsApp: not provided',
+  ].join('\n')
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return sendTelegramMessage(text)
+  await shopChat.notifyAdmin(order.id, text)
+}
+
 async function notifyAdminFailure(order, state) {
   const text = [
-    'Payment was not completed',
+    '❌ PAYMENT FAILED — website order',
     `Order ID: ${order.id}`,
     `Product: ${order.productName}`,
     `Amount: Ksh. ${order.amount}`,
@@ -472,7 +487,9 @@ async function markOrderPaymentComplete(orderId, invoiceId, source) {
 
   const updated = getOrder(orderId)
 
-  if (updated.status === ORDER_STATUS.PAID_READY_FOR_FULFILLMENT && !updated.adminNotifiedAt) {
+  // One "payment complete" alert as soon as the money arrives, even if the
+  // customer closes the page before the (optional) details step.
+  if (!updated.adminNotifiedAt) {
     try {
       await notifyAdmin(updated)
       upsertOrder(orderId, { adminNotifiedAt: Date.now() })
@@ -730,13 +747,16 @@ app.post('/api/delivery-details', async (req, res) => {
 
     const updated = getOrder(orderId)
 
-    if (!updated.adminNotifiedAt) {
-      try {
+    try {
+      if (!updated.adminNotifiedAt) {
         await notifyAdmin(updated)
         upsertOrder(orderId, { adminNotifiedAt: Date.now() })
-      } catch (err) {
-        console.error('Admin notification failed:', err.message)
+      } else if (!updated.detailsNotifiedAt) {
+        await notifyAdminDetails(updated)
+        upsertOrder(orderId, { detailsNotifiedAt: Date.now() })
       }
+    } catch (err) {
+      console.error('Admin notification failed:', err.message)
     }
 
     return res.json({
