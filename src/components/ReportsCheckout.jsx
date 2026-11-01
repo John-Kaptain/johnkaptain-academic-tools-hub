@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { reportsApi, rememberOrder, savedOrders, forgetOrder } from '../reportsApi.js'
+import { reportsApi, rememberOrder, savedOrders, forgetOrder, markSeen } from '../reportsApi.js'
 
 const TELEGRAM_BOT = 'https://t.me/JKTurnitinBot'
 const STAGE_TEXT = {
@@ -19,7 +19,7 @@ function formatSize(bytes) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`
 }
 
-export default function ReportsCheckout({ open, presetType, onClose }) {
+export default function ReportsCheckout({ open, presetType, openOrder, onClose }) {
   const [config, setConfig] = useState(null)
   const [configError, setConfigError] = useState('')
   const [files, setFiles] = useState([]) // { file, type, filter }
@@ -30,6 +30,8 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [recent, setRecent] = useState([])
+  const [note, setNote] = useState('')
+  const [sms, setSms] = useState('')
   const pollRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -38,6 +40,8 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
     setConfigError('')
     setRecent(savedOrders())
     reportsApi.config().then(setConfig).catch(err => setConfigError(err.message))
+    if (openOrder) openSaved(openOrder)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   useEffect(() => () => clearInterval(pollRef.current), [])
@@ -98,11 +102,19 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
 
   function startPolling(orderId, token) {
     clearInterval(pollRef.current)
+    let slow = false
     const tick = async () => {
       try {
         const res = await reportsApi.status(orderId, token)
         setStatus(res.status)
-        if (['DELIVERED', 'CANCELLED'].includes(res.status.stage)) clearInterval(pollRef.current)
+        const last = res.status.messages?.filter(m => m.kind === 'support').at(-1)
+        if (last) markSeen(orderId, last.at)
+        if (['DELIVERED', 'CANCELLED'].includes(res.status.stage) && !slow) {
+          // Reports are done: keep listening for support replies, less often.
+          slow = true
+          clearInterval(pollRef.current)
+          pollRef.current = setInterval(tick, 15000)
+        }
       } catch (err) {
         setError(err.message)
       }
@@ -169,6 +181,31 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
       clearInterval(pollRef.current)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function sendNote() {
+    setError('')
+    try {
+      const res = await reportsApi.message(order.orderId, order.token, note)
+      setStatus(res.status)
+      setNote('')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function sendProof() {
+    setError('')
+    setBusy('Sending payment confirmation…')
+    try {
+      const res = await reportsApi.proof(order.orderId, order.token, sms)
+      setStatus(res.status)
+      setSms('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
     }
   }
 
@@ -367,8 +404,8 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
             )}
             {stage === 'PAYMENT_FAILED' && (
               <p className="text-sm text-red-600 dark:text-red-400">
-                The M-Pesa request did not go through. Check the number and tap “Resend M-Pesa request”. If you pay to
-                the till directly instead, contact support with your order number so it can be matched.
+                The M-Pesa request did not go through. Check the number and tap “Resend M-Pesa request”, or pay
+                to the till and paste the M-Pesa message below.
               </p>
             )}
             {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && (
@@ -380,6 +417,32 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
                 <button className="btn btn-outline" onClick={cancelOrder}>
                   Cancel order
                 </button>
+              </div>
+            )}
+
+            {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && config?.tillNumber && (
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div className="font-semibold text-sm">
+                  Paid via Buy Goods Till {config.tillNumber} instead? (Ksh. {status.amount})
+                </div>
+                {status.proofSubmitted ? (
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    ✅ Payment message received. Support will confirm it shortly — this page updates automatically.
+                  </p>
+                ) : (
+                  <>
+                    <textarea
+                      className={inputClass}
+                      rows={3}
+                      value={sms}
+                      onChange={e => setSms(e.target.value)}
+                      placeholder="Paste the full M-Pesa confirmation message here"
+                    />
+                    <button className="btn btn-primary" onClick={sendProof} disabled={Boolean(busy) || sms.trim().length < 20}>
+                      Send payment confirmation
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -413,21 +476,48 @@ export default function ReportsCheckout({ open, presetType, onClose }) {
               </p>
             )}
 
-            {status.messages?.length > 0 && (
-              <div>
-                <div className="font-semibold text-sm">Updates</div>
-                <ul className="mt-1 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <div>
+              <div className="font-semibold text-sm">Messages &amp; updates</div>
+              {status.messages?.length > 0 && (
+                <ul className="mt-1 space-y-1 text-sm">
                   {status.messages
                     .slice()
                     .reverse()
                     .map((m, k) => (
-                      <li key={k} className="whitespace-pre-line rounded-lg bg-gray-50 dark:bg-slate-800 p-2">
+                      <li
+                        key={k}
+                        className={
+                          'whitespace-pre-line rounded-lg p-2 ' +
+                          (m.kind === 'support'
+                            ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-300 text-gray-900 dark:text-gray-100'
+                            : m.kind === 'client'
+                              ? 'ml-8 bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100'
+                              : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300')
+                        }
+                      >
+                        {m.kind === 'support' && <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">💬 JK Support</div>}
+                        {m.kind === 'client' && <div className="text-xs font-semibold text-blue-700 dark:text-blue-300">You</div>}
                         {m.text}
                       </li>
                     ))}
                 </ul>
-              </div>
-            )}
+              )}
+              {stage !== 'CANCELLED' && !status.deleted && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    className={inputClass}
+                    value={note}
+                    maxLength={1000}
+                    onChange={e => setNote(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && note.trim() && sendNote()}
+                    placeholder="Message support about this order…"
+                  />
+                  <button className="btn btn-outline whitespace-nowrap" onClick={sendNote} disabled={!note.trim() || Boolean(busy)}>
+                    Send
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

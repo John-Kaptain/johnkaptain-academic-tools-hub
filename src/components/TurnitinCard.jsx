@@ -4,7 +4,7 @@ const IMAGE = 'https://guides.turnitin.com/hc/article_attachments/47879733204749
 
 // Featured Turnitin card. Buttons and prices come live from the JK Turnitin
 // Bot, so a service switched off for Telegram disappears here too.
-export default function TurnitinCard({ config, onChoose }) {
+export default function TurnitinCard({ config, onChoose, supportNotice, hasOrders, onOpenOrder }) {
   const services = config?.services || []
   const similarity = services.find(s => s.type === 'SIMILARITY')
   const full =
@@ -26,6 +26,14 @@ export default function TurnitinCard({ config, onChoose }) {
       />
       <div className="flex flex-1 flex-col">
         <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">Turnitin Reports</h3>
+        {supportNotice && (
+          <button
+            className="mt-2 self-start animate-pulse rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow"
+            onClick={() => onOpenOrder(supportNotice)}
+          >
+            💬 New message from JK Support — open
+          </button>
+        )}
         <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
           Upload your document, pay with M-Pesa and download your Turnitin reports right here.
         </p>
@@ -62,6 +70,11 @@ export default function TurnitinCard({ config, onChoose }) {
           </div>
         )}
 
+        {hasOrders && !supportNotice && (
+          <button className="mt-2 self-start text-xs underline text-blue-700 dark:text-blue-300" onClick={() => onOpenOrder(null)}>
+            My orders on this device
+          </button>
+        )}
         {discount?.enabled && discount.requiresCode && !unavailable && (
           <button className="mt-2 self-start text-xs underline text-emerald-700 dark:text-emerald-400" onClick={() => onChoose('RESALE')}>
             Have a {discount.label.toLowerCase()} code?
