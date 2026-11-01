@@ -69,6 +69,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   const { orderId, chatToken } = checkout.body
   assert.match(chatToken, /^[a-f0-9]{48}$/)
 
+  // 1b. One "payment complete" alert as soon as payment completes, before the
+  //     optional details step, in the Academic Tools Bot chat. No PENDING alerts.
+  await wait(100)
+  const early = telegramCalls.filter(c => c.method === 'sendMessage' && /PAYMENT COMPLETE/.test(c.body.text || ''))
+  assert.equal(early.length, 1, 'complete alert sent once, even if the customer closes the page')
+  assert.deepEqual(early[0].body.reply_markup.inline_keyboard[0][1], { text: '📎 Send files', callback_data: 'file:' + orderId })
+
   // 2. WhatsApp is optional: delivery details without a number are accepted.
   const delivery = await api('/api/delivery-details', { method: 'POST', headers: site, body: JSON.stringify({ orderId, whatsappNumber: '', mpesaName: 'Jane' }) })
   assert.equal(delivery.status, 200, JSON.stringify(delivery.body))
@@ -76,6 +83,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   assert(paidAlert, 'paid order alert sent')
   assert.deepEqual(paidAlert.body.reply_markup.inline_keyboard[0][0], { text: '💬 Reply', callback_data: 'reply:' + orderId })
   assert(/WhatsApp: not provided — use the website chat/.test(paidAlert.body.text))
+  assert.equal(telegramCalls.filter(c => /PAYMENT COMPLETE/.test(c.body.text || '')).length, 1, 'no second complete alert')
+  assert.equal(telegramCalls.filter(c => /Customer details added/.test(c.body.text || '') && /M-Pesa name: Jane/.test(c.body.text)).length, 1)
 
   // 3. Token protection.
   assert.equal((await api(`/api/orders/${orderId}/messages`, { headers: { ...site, 'X-Order-Token': 'wrong' } })).status, 404)
@@ -112,6 +121,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
   assert.equal(thread.messages.at(-1).text, 'Logged in fine? Reply here anytime.')
   assert.equal(thread.paid, true)
+
+  // 6a. 📎 Send files button opens file mode with a paperclip prompt.
+  await hook({ update_id: 19, callback_query: { id: 'cbf', from: admin, data: 'file:' + orderId, message: { chat: { id: 111 } } } })
+  await wait(50)
+  const filePrompt = telegramCalls.filter(c => /Send files for/.test(c.body.text || '')).at(-1)
+  assert(filePrompt && filePrompt.body.reply_markup.force_reply, 'file prompt shown')
+  await hook({ update_id: 18, message: { message_id: 619, chat: { id: 111 }, from: admin, text: '/done' } })
 
   // 6b. Files: in reply mode the admin sends a document and a photo in a row
   //     (reply mode stays open), then /done.
@@ -174,11 +190,22 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   assert.equal(unpaidThread.paid, false)
   assert.deepEqual(unpaidThread.messages, [])
 
+  // 9. Failed payment: one ❌ PAYMENT FAILED alert; never a PENDING alert.
+  intasendState = 'FAILED'
+  await api('/api/checkout', { method: 'POST', headers: site, body: JSON.stringify({ productId: 'grammarly-premium', paymentPhone: '0712345670' }) })
+  for (let i = 0; i < 40 && !telegramCalls.some(c => /PAYMENT FAILED/.test(c.body.text || '')); i++) await wait(250)
+  // (the earlier unpaid order now fails too: one alert per order, no repeats)
+  await wait(3000)
+  const failedIds = telegramCalls.filter(c => /PAYMENT FAILED/.test(c.body.text || '')).map(c => /Order ID: (\S+)/.exec(c.body.text)[1])
+  assert(failedIds.length >= 1 && new Set(failedIds).size === failedIds.length, 'one failed alert per order: ' + failedIds)
+  assert(!telegramCalls.some(c => /PENDING/.test(c.body.text || '')), 'no pending alerts')
+
   fs.rmSync(dir, { recursive: true, force: true })
   console.log('PASS: checkout issues a chat key; WhatsApp optional; paid alert has 💬 Reply')
   console.log('PASS: customer message -> admin with Reply; Reply button and swipe-reply -> order page')
   console.log('PASS: wrong key, wrong webhook secret, non-admin chats and /cancel all handled')
   console.log('PASS: admin sends documents/photos in a row; client downloads them; >20 MB refused; /done closes')
+  console.log('PASS: Academic Tools Bot gets one ✅ PAYMENT COMPLETE and one ❌ PAYMENT FAILED alert, never PENDING; 📎 Send files button')
   console.log('PASS: unpaid orders cannot send messages; nothing reaches Telegram')
   process.exit(0)
 })().catch(err => { console.error(err); process.exit(1) })

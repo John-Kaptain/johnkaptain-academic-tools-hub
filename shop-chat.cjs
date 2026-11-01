@@ -75,7 +75,10 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
   }
 
   function replyMarkup(orderId) {
-    return { inline_keyboard: [[{ text: '💬 Reply', callback_data: 'reply:' + orderId }]] }
+    return { inline_keyboard: [[
+      { text: '💬 Reply', callback_data: 'reply:' + orderId },
+      { text: '📎 Send files', callback_data: 'file:' + orderId },
+    ]] }
   }
 
   async function notifyAdmin(orderId, text) {
@@ -104,7 +107,7 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
       '',
       text,
       '',
-      'Tap 💬 Reply (or swipe-reply to this message) to answer — text or files — on the website.',
+      'Tap 💬 Reply to answer, or 📎 Send files for documents — they appear on the customer\'s order page.',
     ].join('\n')).catch(err => console.error('Shop chat: admin notification failed:', err.message))
     return view(getOrder(order.id))
   }
@@ -132,19 +135,25 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
     if (callback) {
       const chatId = String(callback.message?.chat?.id || callback.from?.id || '')
       if (chatId !== String(adminChatId)) return
-      const m = /^reply:(.+)$/.exec(String(callback.data || ''))
-      const order = m ? getOrder(m[1]) : null
-      await telegramApi('answerCallbackQuery', { callback_query_id: callback.id, text: order ? 'Reply mode opened' : 'Order not found' }).catch(() => {})
+      const m = /^(reply|file):(.+)$/.exec(String(callback.data || ''))
+      const order = m ? getOrder(m[2]) : null
+      const forFiles = m?.[1] === 'file'
+      await telegramApi('answerCallbackQuery', { callback_query_id: callback.id, text: order ? (forFiles ? 'Send the files now' : 'Reply mode opened') : 'Order not found' }).catch(() => {})
       if (!order) return
       pendingReply.set(chatId, { orderId: order.id, until: now() + REPLY_MODE_MS })
       // force_reply makes the next message a reply to this prompt, so it is
       // matched to the order even in a group chat with privacy mode on.
       const prompt = await telegramApi('sendMessage', {
         chat_id: chatId,
-        text: `✍️ Reply mode for ${order.id} (${order.productName}).\n` +
-          'Send messages, documents or photos now (several are fine) — each appears on the customer\'s order page.\n' +
-          'Send /done when finished.',
-        reply_markup: { force_reply: true, input_field_placeholder: `Message or file for ${order.id}` },
+        text: forFiles
+          ? `📎 Send files for ${order.id} (${order.productName}).\n` +
+            'Tap the 📎 paperclip and send the document(s) or photo(s) now — several are fine, max 20 MB each. ' +
+            'Add a caption if you like. Each file appears on the customer\'s order page as a download.\n' +
+            'Send /done when finished.'
+          : `✍️ Reply mode for ${order.id} (${order.productName}).\n` +
+            'Send messages, documents or photos now (several are fine) — each appears on the customer\'s order page.\n' +
+            'Send /done when finished.',
+        reply_markup: { force_reply: true, input_field_placeholder: forFiles ? `Attach files for ${order.id}` : `Message or file for ${order.id}` },
       })
       rememberTelegramMessage(order.id, prompt?.result?.message_id)
       return
