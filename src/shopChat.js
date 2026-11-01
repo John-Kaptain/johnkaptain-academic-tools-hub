@@ -21,6 +21,9 @@ export const shopChat = {
   send: (orderId, token, text) => call(`/api/orders/${orderId}/messages`, { method: 'POST', token, json: { text } }),
 }
 
+export const shopFileUrl = (orderId, token, key) =>
+  `${SHOP_API}/api/orders/${encodeURIComponent(orderId)}/files/${encodeURIComponent(key)}?token=${encodeURIComponent(token)}`
+
 export function savedShopOrders() {
   try {
     const list = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]')
