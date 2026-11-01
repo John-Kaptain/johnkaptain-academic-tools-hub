@@ -40,6 +40,8 @@ export const reportsApi = {
   cancel: (orderId, token) => call(`/api/web/orders/${orderId}/cancel`, { method: 'POST', token }),
   deleteData: (orderId, token) => call(`/api/web/orders/${orderId}/delete`, { method: 'POST', token }),
   message: (orderId, token, text) => call(`/api/web/orders/${orderId}/message`, { method: 'POST', token, json: { text } }),
+  highlights: (orderId, token, fileId, phone) =>
+    call(`/api/web/orders/${orderId}/highlights`, { method: 'POST', token, json: { fileId, phone } }),
   proof: (orderId, token, text) => call(`/api/web/orders/${orderId}/proof`, { method: 'POST', token, json: { text } }),
   status: (orderId, token) => call(`/api/web/orders/${orderId}`, { token }),
   reportUrl: (orderId, token, reportId) =>

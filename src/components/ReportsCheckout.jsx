@@ -14,6 +14,75 @@ const STAGE_TEXT = {
 const inputClass =
   'w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 outline-none'
 
+const HIGHLIGHT_TEXT = {
+  CHECKING: 'Checking availability…',
+  WAITING_PAYMENT: 'M-Pesa prompt sent — enter your PIN on your phone.',
+  DELIVERING: 'Paid ✓ Preparing your download…',
+  DELIVERED: '✅ Added to your reports above.',
+  UNAVAILABLE: 'Not available for this document. No payment was taken.',
+  REVIEW: 'Payment is being checked by support. Do not pay again.',
+}
+
+// Paid AI highlights (AI score below 20%): one row per document, with the
+// price on the button. No chat messages.
+function HighlightsOffer({ order, items, defaultPhone, onStatus }) {
+  const [openId, setOpenId] = useState(null)
+  const [phone, setPhone] = useState(defaultPhone || '')
+  const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
+  async function buy(id) {
+    setError('')
+    setSending(true)
+    try {
+      const res = await reportsApi.highlights(order.orderId, order.token, id, phone)
+      onStatus(res.status)
+      setOpenId(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <div className="font-semibold">✨ AI highlights</div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        See which sentences were flagged as AI (available when the AI score is below 20%).
+      </p>
+      {items.map(h => (
+        <div key={h.id} className="rounded-xl border border-violet-300 dark:border-violet-700 p-3 text-sm">
+          <div className="truncate font-medium">📄 {h.name}</div>
+          {['AVAILABLE', 'FAILED'].includes(h.state) && openId !== h.id && (
+            <button className="btn btn-primary mt-2 w-full" onClick={() => { setOpenId(h.id); setError('') }}>
+              Get AI highlights — Ksh {h.price}
+            </button>
+          )}
+          {h.state === 'FAILED' && openId !== h.id && (
+            <p className="mt-1 text-xs text-gray-500">The last payment was not completed. You can try again.</p>
+          )}
+          {openId === h.id && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                className={inputClass + ' flex-1 min-w-[10rem]'}
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="M-Pesa number 07XXXXXXXX"
+                inputMode="tel"
+              />
+              <button className="btn btn-primary whitespace-nowrap" disabled={sending || !phone.trim()} onClick={() => buy(h.id)}>
+                {sending ? 'Sending…' : `Pay Ksh ${h.price}`}
+              </button>
+              <button className="btn btn-outline" onClick={() => setOpenId(null)}>Cancel</button>
+            </div>
+          )}
+          {HIGHLIGHT_TEXT[h.state] && <p className="mt-2 text-gray-700 dark:text-gray-300">{HIGHLIGHT_TEXT[h.state]}</p>}
+        </div>
+      ))}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  )
+}
+
 function formatSize(bytes) {
   if (!bytes) return ''
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`
@@ -460,9 +529,13 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
                   </a>
                 ))}
                 <p className="text-xs text-gray-500">
-                  Only this device can open this order. Reports are removed automatically after 14 days.
+                  Only this device can open this order. Reports are removed automatically after 48 hours.
                 </p>
               </div>
+            )}
+
+            {status.highlights?.length > 0 && !status.deleted && (
+              <HighlightsOffer order={order} items={status.highlights} defaultPhone={phone} onStatus={setStatus} />
             )}
 
             {stage === 'DELIVERED' && !status.deleted && (
@@ -502,7 +575,14 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
                     ))}
                 </ul>
               )}
-              {stage !== 'CANCELLED' && !status.deleted && (
+              {status.chatOpensAt && !status.deleted && (
+                <p className="mt-2 rounded-xl bg-gray-50 dark:bg-slate-800 p-3 text-sm text-gray-700 dark:text-gray-300">
+                  ⏳ Your reports are being prepared and usually arrive in time. Messaging opens at{' '}
+                  <b>{new Date(status.chatOpensAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b> if they
+                  have not arrived by then.
+                </p>
+              )}
+              {stage !== 'CANCELLED' && !status.deleted && !status.chatOpensAt && (
                 <div className="mt-2 flex gap-2">
                   <input
                     className={inputClass}
