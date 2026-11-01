@@ -11,7 +11,7 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-pro',
         name: 'Stealthwriter Plus Plan',
-        price: 1700,
+        price: 1500,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 5,000 words per input. Includes 150 Ghost 5.2 Pro and legacy humanizations every 24 hours, resetting at 3 a.m. Rehumanizing does not consume humanizations. Verification is through Google. Monthly subscription.',
@@ -19,7 +19,7 @@ export const CATEGORIES = [
       {
         id: 'stealthwriter-starter',
         name: 'Stealthwriter Starter Plan',
-        price: 1100,
+        price: 1000,
         image: 'https://fahimai.com/wp-content/uploads/2024/08/Fahim-AI-21.png',
         description:
           'Humanizes up to 5,000 words per input. Includes 50 Ghost 5.2 Pro and legacy humanizations every 24 hours REHUMANIZING DOES NOT CONSUME humanizations. Verification is through Google. Monthly subscription.',

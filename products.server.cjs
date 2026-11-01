@@ -1,6 +1,6 @@
 ﻿const PRODUCTS = [
-  { id: 'stealthwriter-pro', name: 'Stealthwriter Plus Plan', price: 1700 },
-  { id: 'stealthwriter-starter', name: 'Stealthwriter Starter Plan', price: 1100 },
+  { id: 'stealthwriter-pro', name: 'Stealthwriter Plus Plan', price: 1500 },
+  { id: 'stealthwriter-starter', name: 'Stealthwriter Starter Plan', price: 1000 },
   { id: 'ryne-ai', name: 'Ryne AI', price: 1000 },
   { id: 'ai-removal-per-page', name: 'AI Removal Per Page', price: 50 },
 
