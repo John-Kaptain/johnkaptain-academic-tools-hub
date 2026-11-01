@@ -52,6 +52,7 @@ export default function OrderChat({ orderId, token, compact = false }) {
   }
 
   const messages = thread?.messages || []
+  const locked = thread && !thread.paid
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -82,6 +83,10 @@ export default function OrderChat({ orderId, token, compact = false }) {
         ))}
         <div ref={endRef} />
       </div>
+      {locked && (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Chat opens once your payment is confirmed.</p>
+      )}
+      {!locked && (
       <form onSubmit={send} className="mt-2 flex gap-2">
         <input
           value={text}
@@ -94,6 +99,7 @@ export default function OrderChat({ orderId, token, compact = false }) {
           Send
         </button>
       </form>
+      )}
       {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   )
