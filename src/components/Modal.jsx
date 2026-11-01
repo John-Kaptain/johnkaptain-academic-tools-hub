@@ -1,10 +1,13 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
+import OrderChat from './OrderChat.jsx'
+import { rememberShopOrder } from '../shopChat.js'
 
 const BUSINESS_WHATSAPP_E164 = '254701730921'
 const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
 
 const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
 const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
+const CHAT_REMINDER = 'After payment, your logins are delivered right here in the order chat (also saved under 💬 My orders). WhatsApp 0701730921 is optional.'
 
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -105,6 +108,7 @@ export default function Modal({ open, item, onClose }) {
   const [whatsAppNumber, setWhatsAppNumber] = useState('')
   const [mpesaName, setMpesaName] = useState('')
   const [orderId, setOrderId] = useState('')
+  const [chatToken, setChatToken] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -117,6 +121,7 @@ export default function Modal({ open, item, onClose }) {
       setWhatsAppNumber('')
       setMpesaName('')
       setOrderId('')
+      setChatToken('')
       setStatusMessage('')
       setError('')
       setLoading(false)
@@ -155,6 +160,10 @@ export default function Modal({ open, item, onClose }) {
       })
 
       setOrderId(response.orderId)
+      if (response.chatToken) {
+        setChatToken(response.chatToken)
+        rememberShopOrder({ orderId: response.orderId, token: response.chatToken, product: item.name })
+      }
       setStep('waiting')
       setStatusMessage('STK Push sent. Complete the payment on your phone.')
 
@@ -256,7 +265,7 @@ export default function Modal({ open, item, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      <div className="relative card max-w-lg w-full">
+      <div className="relative card max-w-lg w-full max-h-[92vh] overflow-y-auto">
         <h3 className="text-xl font-bold">{item.name}</h3>
 
         <p className="mt-2 text-gray-600 dark:text-gray-300">
@@ -264,7 +273,7 @@ export default function Modal({ open, item, onClose }) {
         </p>
 
         <p className="mt-3 font-semibold italic text-red-600 dark:text-red-400">
-          {WHATSAPP_REMINDER}
+          {CHAT_REMINDER}
         </p>
 
         <p className="mt-1 font-semibold">{`Ksh. ${item.price}`}</p>
@@ -305,6 +314,8 @@ export default function Modal({ open, item, onClose }) {
               {statusMessage || 'Waiting for payment confirmation...'}
             </div>
 
+            {chatToken && <OrderChat orderId={orderId} token={chatToken} compact />}
+
             <div className="flex gap-3 justify-end">
               <button type="button" className="btn btn-outline" onClick={onClose}>
                 Close
@@ -316,18 +327,17 @@ export default function Modal({ open, item, onClose }) {
         {step === 'delivery' && (
           <form onSubmit={submitDeliveryDetails} className="mt-5 space-y-4">
             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300">
-              Payment confirmed. Enter the WhatsApp number where you want your logins delivered.
+              Payment confirmed. Your logins will be sent in the order chat on this page. Adding a WhatsApp number is optional.
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">WhatsApp Number</label>
+              <label className="block text-sm font-medium mb-1">WhatsApp Number (optional)</label>
               <input
                 type="text"
                 value={whatsAppNumber}
                 onChange={e => setWhatsAppNumber(e.target.value)}
-                placeholder="07XXXXXXXX / 01XXXXXXXX / 2547XXXXXXXX"
+                placeholder="Optional: 07XXXXXXXX / 01XXXXXXXX / 2547XXXXXXXX"
                 className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none"
-                required
               />
             </div>
 
@@ -346,7 +356,7 @@ export default function Modal({ open, item, onClose }) {
 
             <div className="flex gap-3 justify-end">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Saving...' : 'Submit Delivery Number'}
+                {loading ? 'Saving...' : 'Continue'}
               </button>
               <button type="button" className="btn btn-outline" onClick={onClose}>
                 Cancel
@@ -360,19 +370,25 @@ export default function Modal({ open, item, onClose }) {
             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300">
               <p className="font-semibold">Order received successfully.</p>
               <p className="mt-1">Order ID: {orderId}</p>
-              <p className="mt-1">Tap below to continue on WhatsApp and receive your logins.</p>
+              <p className="mt-1">
+                {chatToken
+                  ? 'JK Support will send your logins in the chat below. You can close this window — reopen it anytime from 💬 My orders.'
+                  : 'Tap below to continue on WhatsApp and receive your logins.'}
+              </p>
             </div>
 
-            <div className="flex gap-3 justify-end">
+            {chatToken && <OrderChat orderId={orderId} token={chatToken} />}
+
+            <div className="flex flex-wrap gap-3 justify-end items-center">
               <a
-                className="btn btn-primary"
+                className={chatToken ? 'text-sm underline text-gray-600 dark:text-gray-300' : 'btn btn-primary'}
                 href={makeWhatsAppLink(orderId, item.name)}
                 target="_blank"
                 rel="noreferrer"
               >
-                Continue on WhatsApp
+                {chatToken ? 'Prefer WhatsApp? Chat there instead' : 'Continue on WhatsApp'}
               </a>
-              <button type="button" className="btn btn-outline" onClick={onClose}>
+              <button type="button" className={chatToken ? 'btn btn-primary' : 'btn btn-outline'} onClick={onClose}>
                 Done
               </button>
             </div>
