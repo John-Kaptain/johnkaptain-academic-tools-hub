@@ -25,19 +25,26 @@ Object.assign(process.env, {
 // Simulated outside world.
 const telegramCalls = []
 let messageId = 500
+let intasendState = 'COMPLETE'
 const realFetch = global.fetch
 global.fetch = async (url, options = {}) => {
   const href = String(url)
+  if (href.startsWith('https://api.telegram.org/file/bot123:test/')) {
+    const bytes = Buffer.from('%PDF-1.4 coursehero unlock for ' + href.split('/').pop())
+    return { ok: true, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) }
+  }
   if (href.startsWith('https://api.telegram.org/')) {
     const method = href.split('/').pop()
     const body = JSON.parse(options.body || '{}')
     telegramCalls.push({ method, body })
+    if (method === 'getFile') return { ok: true, json: async () => ({ ok: true, result: { file_path: 'documents/' + body.file_id + '.pdf' } }) }
+    if (method === 'getWebhookInfo') return { ok: true, json: async () => ({ ok: true, result: { url: 'https://shop.example.test/telegram/webhook', pending_update_count: 0 } }) }
     return { ok: true, json: async () => ({ ok: true, result: { message_id: ++messageId } }) }
   }
   if (href.startsWith('https://api.intasend.com/')) {
     // STK push accepted and immediately complete.
-    return { ok: true, status: 200, text: async () => JSON.stringify({ invoice: { invoice_id: 'INV1', state: 'COMPLETE' } }),
-      json: async () => ({ invoice: { invoice_id: 'INV1', state: 'COMPLETE' } }) }
+    const body = { invoice: { invoice_id: 'INV1', state: intasendState } }
+    return { ok: true, status: 200, text: async () => JSON.stringify(body), json: async () => body }
   }
   return realFetch(url, options)
 }
@@ -85,6 +92,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   const admin = { id: 111, is_bot: false, first_name: 'Admin' }
   await hook({ update_id: 1, callback_query: { id: 'cb1', from: admin, data: 'reply:' + orderId, message: { message_id: 600, chat: { id: 111 } } } })
   await wait(100)
+  const prompt = telegramCalls.filter(c => /Reply mode for/.test(c.body.text || '')).at(-1)
+  assert.equal(prompt.body.reply_markup.force_reply, true, 'Reply prompt asks Telegram for a reply (works in groups too)')
   await hook({ update_id: 2, message: { message_id: 601, chat: { id: 111 }, from: admin, text: 'Email: jane@example.com\nPassword: Pass1234' } })
   await wait(100)
   let thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
@@ -92,7 +101,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
     ['client', 'Hello, waiting for my Grammarly logins.'],
     ['support', 'Email: jane@example.com\nPassword: Pass1234'],
   ])
-  assert(telegramCalls.some(c => /Sent to the customer on the website/.test(c.body.text || '')), 'admin gets a confirmation')
+  assert(telegramCalls.some(c => /sent to the customer on the website/i.test(c.body.text || '')), 'admin gets a confirmation')
 
   // 6. Swipe-reply to the original paid alert also reaches the customer.
   const alertId = 500 + telegramCalls.filter(c => c.method === 'sendMessage').indexOf(paidAlert) + 1
@@ -103,6 +112,40 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
   assert.equal(thread.messages.at(-1).text, 'Logged in fine? Reply here anytime.')
   assert.equal(thread.paid, true)
+
+  // 6b. Files: in reply mode the admin sends a document and a photo in a row
+  //     (reply mode stays open), then /done.
+  await hook({ update_id: 20, callback_query: { id: 'cb9', from: admin, data: 'reply:' + orderId, message: { chat: { id: 111 } } } })
+  await hook({ update_id: 21, message: { message_id: 620, chat: { id: 111 }, from: admin, caption: 'Your Course Hero unlock',
+    document: { file_id: 'DOC1', file_name: 'Unlocked – Week 4.pdf', file_size: 52000, mime_type: 'application/pdf' } } })
+  await hook({ update_id: 22, message: { message_id: 621, chat: { id: 111 }, from: admin,
+    photo: [{ file_id: 'PSMALL', file_size: 900 }, { file_id: 'PBIG', file_size: 90000 }] } })
+  await hook({ update_id: 23, message: { message_id: 622, chat: { id: 111 }, from: admin, text: '/done' } })
+  await hook({ update_id: 24, message: { message_id: 623, chat: { id: 111 }, from: admin, text: 'after done' } })
+  await hook({ update_id: 25, message: { message_id: 624, chat: { id: 111 }, from: admin, caption: 'too big', reply_to_message: { message_id: storedIds[0] },
+    document: { file_id: 'HUGE', file_name: 'huge.zip', file_size: 30 * 1024 * 1024 } } })
+  await wait(150)
+  thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
+  const files = thread.messages.filter(m => m.file)
+  assert.deepEqual(files.map(m => [m.text, m.file.name, m.file.size]), [
+    ['Your Course Hero unlock', 'Unlocked – Week 4.pdf', 52000],
+    ['', 'photo-621.jpg', 90000],
+  ])
+  assert(!JSON.stringify(thread).includes('DOC1'), 'Telegram file ids are not exposed to the page')
+  assert(!thread.messages.some(m => m.text === 'after done' || m.text === 'too big'))
+  assert(telegramCalls.some(c => /larger than 20 MB/.test(c.body.text || '')), 'admin told the file is too big')
+  const dl = await realFetch(`${base}/api/orders/${orderId}/files/${files[0].file.key}?token=${chatToken}`, { headers: { Origin: site.Origin } })
+  assert.equal(dl.status, 200)
+  assert.match(dl.headers.get('content-disposition'), /filename\*=UTF-8''Unlocked%20%E2%80%93%20Week%204\.pdf/)
+  assert.equal(await dl.text(), '%PDF-1.4 coursehero unlock for DOC1.pdf')
+  const photo = await realFetch(`${base}/api/orders/${orderId}/files/${files[1].file.key}?token=${chatToken}`)
+  assert.equal(await photo.text(), '%PDF-1.4 coursehero unlock for PBIG.pdf', 'largest photo size is delivered')
+  assert.equal((await realFetch(`${base}/api/orders/${orderId}/files/${files[0].file.key}?token=wrong`)).status, 404)
+
+  // 6c. Health shows Telegram's view of the webhook.
+  const health = (await api('/health')).body
+  assert.equal(health.telegramWebhook.ok, true)
+  assert.equal(health.telegramWebhook.expectedUrl, 'https://shop.example.test/telegram/webhook')
 
   // 7. Security: wrong webhook secret and non-admin chats are ignored.
   assert.equal((await hook({ update_id: 4, message: { chat: { id: 111 }, text: 'x' } }, 'wrong')).status, 401)
@@ -119,9 +162,23 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
   assert(!thread.messages.some(m => m.text === 'note to self'))
 
+  // 8. Unpaid orders cannot message (no Telegram flooding from abandoned checkouts).
+  intasendState = 'PENDING'
+  const unpaid = await api('/api/checkout', { method: 'POST', headers: site, body: JSON.stringify({ productId: 'grammarly-premium', paymentPhone: '0712345679' }) })
+  assert.equal(unpaid.status, 200, JSON.stringify(unpaid.body))
+  const before = telegramCalls.length
+  const blocked = await api(`/api/orders/${unpaid.body.orderId}/messages`, { method: 'POST', headers: { ...site, 'X-Order-Token': unpaid.body.chatToken }, body: JSON.stringify({ text: 'spam' }) })
+  assert.equal(blocked.status, 403)
+  assert.equal(telegramCalls.slice(before).filter(c => /Website customer message/.test(c.body.text || '')).length, 0, 'nothing sent to Telegram')
+  const unpaidThread = (await api(`/api/orders/${unpaid.body.orderId}/messages`, { headers: { ...site, 'X-Order-Token': unpaid.body.chatToken } })).body
+  assert.equal(unpaidThread.paid, false)
+  assert.deepEqual(unpaidThread.messages, [])
+
   fs.rmSync(dir, { recursive: true, force: true })
   console.log('PASS: checkout issues a chat key; WhatsApp optional; paid alert has 💬 Reply')
   console.log('PASS: customer message -> admin with Reply; Reply button and swipe-reply -> order page')
   console.log('PASS: wrong key, wrong webhook secret, non-admin chats and /cancel all handled')
+  console.log('PASS: admin sends documents/photos in a row; client downloads them; >20 MB refused; /done closes')
+  console.log('PASS: unpaid orders cannot send messages; nothing reaches Telegram')
   process.exit(0)
 })().catch(err => { console.error(err); process.exit(1) })

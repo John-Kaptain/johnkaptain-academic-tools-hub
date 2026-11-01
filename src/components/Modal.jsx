@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
 
 const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
 const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
-const CHAT_REMINDER = 'After payment, your logins are delivered right here in the order chat (also saved under 💬 My orders). WhatsApp 0701730921 is optional.'
+const CHAT_REMINDER = 'After payment, your logins are delivered right here in the order chat (also saved under 💬 My orders). You can also reach us on WhatsApp 0701730921.'
 
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -160,14 +160,11 @@ export default function Modal({ open, item, onClose }) {
       })
 
       setOrderId(response.orderId)
-      if (response.chatToken) {
-        setChatToken(response.chatToken)
-        rememberShopOrder({ orderId: response.orderId, token: response.chatToken, product: item.name })
-      }
+      if (response.chatToken) setChatToken(response.chatToken)
       setStep('waiting')
       setStatusMessage('STK Push sent. Complete the payment on your phone.')
 
-      startPolling(response.orderId)
+      startPolling(response.orderId, response.chatToken)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -175,7 +172,10 @@ export default function Modal({ open, item, onClose }) {
     }
   }
 
-  function startPolling(newOrderId) {
+  function startPolling(newOrderId, newChatToken) {
+    // Saved under 💬 My orders only once paid (the chat is for paid orders).
+    const rememberPaid = () =>
+      newChatToken && rememberShopOrder({ orderId: newOrderId, token: newChatToken, product: item.name })
     let tries = 0
     const maxTries = 150
 
@@ -204,6 +204,7 @@ export default function Modal({ open, item, onClose }) {
         ) {
           clearInterval(pollRef.current)
           pollRef.current = null
+          rememberPaid()
           setStep('delivery')
           setStatusMessage('')
           return
@@ -215,6 +216,7 @@ export default function Modal({ open, item, onClose }) {
         ) {
           clearInterval(pollRef.current)
           pollRef.current = null
+          rememberPaid()
           setStep('success')
           return
         }
@@ -314,8 +316,6 @@ export default function Modal({ open, item, onClose }) {
               {statusMessage || 'Waiting for payment confirmation...'}
             </div>
 
-            {chatToken && <OrderChat orderId={orderId} token={chatToken} compact />}
-
             <div className="flex gap-3 justify-end">
               <button type="button" className="btn btn-outline" onClick={onClose}>
                 Close
@@ -327,16 +327,16 @@ export default function Modal({ open, item, onClose }) {
         {step === 'delivery' && (
           <form onSubmit={submitDeliveryDetails} className="mt-5 space-y-4">
             <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300">
-              Payment confirmed. Your logins will be sent in the order chat on this page. Adding a WhatsApp number is optional.
+              Payment confirmed. Your logins will be sent in the order chat on this page. You can also leave your WhatsApp number if you'd like us to reach you there.
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">WhatsApp Number (optional)</label>
+              <label className="block text-sm font-medium mb-1">Your WhatsApp Number</label>
               <input
                 type="text"
                 value={whatsAppNumber}
                 onChange={e => setWhatsAppNumber(e.target.value)}
-                placeholder="Optional: 07XXXXXXXX / 01XXXXXXXX / 2547XXXXXXXX"
+                placeholder="07XXXXXXXX / 01XXXXXXXX / 2547XXXXXXXX"
                 className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none"
               />
             </div>
@@ -386,7 +386,7 @@ export default function Modal({ open, item, onClose }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                {chatToken ? 'Prefer WhatsApp? Chat there instead' : 'Continue on WhatsApp'}
+                {chatToken ? 'You can also reach us on WhatsApp' : 'Continue on WhatsApp'}
               </a>
               <button type="button" className={chatToken ? 'btn btn-primary' : 'btn btn-outline'} onClick={onClose}>
                 Done

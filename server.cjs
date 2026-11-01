@@ -40,8 +40,18 @@ const ALLOWED_ORIGINS = [...new Set([
 ].map(v => v.trim()).filter(Boolean))]
 
 // Telegram webhook for admin replies (website order chat).
-const TELEGRAM_WEBHOOK_SECRET = String(process.env.TELEGRAM_WEBHOOK_SECRET || '').trim()
-const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '')
+// Works with no setup on Render: the public URL comes from RENDER_EXTERNAL_URL
+// and the secret is derived from the bot token. A custom secret with characters
+// Telegram does not accept (only A-Z a-z 0-9 _ -) is hashed into a valid one.
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || '').trim().replace(/\/+$/, '')
+function webhookSecret() {
+  const raw = String(process.env.TELEGRAM_WEBHOOK_SECRET || '').trim()
+  if (/^[A-Za-z0-9_-]{1,256}$/.test(raw)) return raw
+  const seed = raw || String(process.env.TELEGRAM_BOT_TOKEN || '')
+  return seed ? require('crypto').createHash('sha256').update('jk-shop-webhook:' + seed).digest('hex') : ''
+}
+const TELEGRAM_WEBHOOK_SECRET = webhookSecret()
+const TELEGRAM_WEBHOOK_URL = PUBLIC_BASE_URL ? PUBLIC_BASE_URL + '/telegram/webhook' : ''
 
 const INACTIVE_START_EAT = normalizeHHMM(process.env.INACTIVE_START_EAT, '00:00')
 const INACTIVE_END_EAT = normalizeHHMM(process.env.INACTIVE_END_EAT, '06:00')
@@ -417,7 +427,7 @@ async function notifyAdmin(order) {
       ? `WhatsApp (optional contact): https://wa.me/${order.deliveryWhatsAppNumber}`
       : 'WhatsApp: not provided — use the website chat',
     '',
-    'Tap 💬 Reply (or swipe-reply) to send the logins to the customer on the website.',
+    'Tap 💬 Reply (or swipe-reply) to send logins or files to the customer on the website.',
   ].join('\n')
 
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return sendTelegramMessage(text)
@@ -845,6 +855,26 @@ app.post('/api/orders/:orderId/messages', async (req, res) => {
     return res.status(err.status || 500).json({ error: err.message })
   }
 })
+// Files JK Support sent from Telegram (documents, photos...), passed through
+// from Telegram's servers; nothing is stored on this service.
+app.get('/api/orders/:orderId/files/:key', async (req, res) => {
+  try {
+    const order = shopChat.authorize(req.params.orderId, chatToken(req))
+    const file = shopChat.findFile(order, req.params.key)
+    if (!file) return res.status(404).json({ error: 'File not found' })
+    const info = await telegramApi('getFile', { file_id: file.telegramFileId })
+    const download = await fetch(`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${info.result.file_path}`)
+    if (!download.ok) throw new Error('Telegram file download failed')
+    const body = Buffer.from(await download.arrayBuffer())
+    const safeName = String(file.name || 'file').replace(/[\r\n"]/g, '_')
+    res.setHeader('Content-Type', file.mime || 'application/octet-stream')
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(safeName)}`)
+    res.setHeader('Cache-Control', 'private, no-store')
+    return res.end(body)
+  } catch (err) {
+    return res.status(err.status || 502).json({ error: err.status ? err.message : 'Could not fetch the file. Please try again.' })
+  }
+})
 app.post('/telegram/webhook', (req, res) => {
   if (!TELEGRAM_WEBHOOK_SECRET || req.headers['x-telegram-bot-api-secret-token'] !== TELEGRAM_WEBHOOK_SECRET) {
     return res.status(401).end()
@@ -853,7 +883,43 @@ app.post('/telegram/webhook', (req, res) => {
   shopChat.handleUpdate(req.body).catch(err => console.error('Telegram update failed:', err.message))
 })
 
-app.get('/health', (req, res) => {
+// Telegram's own view of the webhook (no secrets): shows why replies fail.
+async function telegramWebhookStatus() {
+  if (!TELEGRAM_BOT_TOKEN) return { ok: false, problem: 'TELEGRAM_BOT_TOKEN not set' }
+  if (!TELEGRAM_WEBHOOK_URL) return { ok: false, problem: 'Public URL unknown: set PUBLIC_BASE_URL' }
+  try {
+    const info = (await telegramApi('getWebhookInfo', {})).result || {}
+    return {
+      ok: info.url === TELEGRAM_WEBHOOK_URL && !info.last_error_message,
+      registeredUrl: info.url || '(none)',
+      expectedUrl: TELEGRAM_WEBHOOK_URL,
+      pendingUpdates: info.pending_update_count || 0,
+      lastError: info.last_error_message || null,
+      lastErrorAt: info.last_error_date ? new Date(info.last_error_date * 1000).toISOString() : null,
+    }
+  } catch (err) {
+    return { ok: false, problem: err.message }
+  }
+}
+async function ensureTelegramWebhook(force = false) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_WEBHOOK_URL) {
+    console.log('Website order chat replies disabled: set PUBLIC_BASE_URL')
+    return
+  }
+  try {
+    const info = (await telegramApi('getWebhookInfo', {})).result || {}
+    if (!force && info.url === TELEGRAM_WEBHOOK_URL && !info.last_error_message) return
+  } catch { /* fall through and set it */ }
+  await telegramApi('setWebhook', {
+    url: TELEGRAM_WEBHOOK_URL,
+    secret_token: TELEGRAM_WEBHOOK_SECRET,
+    allowed_updates: ['message', 'callback_query'],
+  })
+    .then(() => console.log('Telegram webhook set for website order chat: ' + TELEGRAM_WEBHOOK_URL))
+    .catch(err => console.error('Telegram webhook setup failed:', err.message))
+}
+
+app.get('/health', async (req, res) => {
   res.json({
     ok: true,
     intasendMode: INTASEND_TEST ? 'TEST' : 'LIVE',
@@ -871,8 +937,9 @@ app.get('/health', (req, res) => {
     storeFile: STORE_FILE,
     storeFileExists: fs.existsSync(STORE_FILE),
     ordersLoaded: Object.keys(orders).length,
-    telegramWebhookConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET && PUBLIC_BASE_URL),
-    deployMarker: 'shop-chat-v1',
+    telegramWebhookConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET && TELEGRAM_WEBHOOK_URL),
+    telegramWebhook: await telegramWebhookStatus(),
+    deployMarker: 'shop-chat-v2',
   })
 })
 
@@ -888,15 +955,7 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || 'none configured'}`)
   console.log(`Inactive payments window (EAT): ${INACTIVE_START_EAT} - ${INACTIVE_END_EAT}`)
-  if (TELEGRAM_BOT_TOKEN && TELEGRAM_WEBHOOK_SECRET && PUBLIC_BASE_URL) {
-    telegramApi('setWebhook', {
-      url: PUBLIC_BASE_URL + '/telegram/webhook',
-      secret_token: TELEGRAM_WEBHOOK_SECRET,
-      allowed_updates: ['message', 'callback_query'],
-    })
-      .then(() => console.log('Telegram webhook set for website order chat'))
-      .catch(err => console.error('Telegram webhook setup failed:', err.message))
-  } else {
-    console.log('Website order chat replies disabled: set TELEGRAM_WEBHOOK_SECRET and PUBLIC_BASE_URL')
-  }
+  // Register now, then re-check every 30 minutes in case it was replaced.
+  ensureTelegramWebhook(true)
+  setInterval(ensureTelegramWebhook, 30 * 60 * 1000).unref()
 })

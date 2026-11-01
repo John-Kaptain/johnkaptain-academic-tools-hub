@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { shopChat, markShopSeen } from '../shopChat.js'
+import { shopChat, markShopSeen, shopFileUrl } from '../shopChat.js'
+
+const formatSize = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB')
 
 // Chat with JK Support about one order. Replies from the admin's Telegram
 // (💬 Reply button or swipe-reply) appear here — e.g. login details.
@@ -52,6 +54,7 @@ export default function OrderChat({ orderId, token, compact = false }) {
   }
 
   const messages = thread?.messages || []
+  const locked = thread && !thread.paid
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -61,7 +64,7 @@ export default function OrderChat({ orderId, token, compact = false }) {
       <div className={`mt-2 space-y-2 overflow-y-auto ${compact ? 'max-h-48' : 'max-h-72'}`}>
         {!messages.length && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Your logins and any updates from JK Support will appear here. You can also send us a message.
+            Your logins, files and any updates from JK Support will appear here. You can also send us a message.
           </p>
         )}
         {messages.map((m, k) => (
@@ -78,10 +81,24 @@ export default function OrderChat({ orderId, token, compact = false }) {
               {m.from === 'support' ? 'JK Support' : 'You'} · {new Date(m.at).toLocaleString()}
             </div>
             {m.text}
+            {m.file && (
+              <a
+                href={shopFileUrl(orderId, token, m.file.key)}
+                className="mt-1 flex items-center gap-2 rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1.5 font-medium text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-slate-800"
+              >
+                <span aria-hidden="true">📎</span>
+                <span className="min-w-0 flex-1 truncate">{m.file.name}</span>
+                <span className="text-xs text-gray-500">{m.file.size ? formatSize(m.file.size) + ' · ' : ''}Download</span>
+              </a>
+            )}
           </div>
         ))}
         <div ref={endRef} />
       </div>
+      {locked && (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Chat opens once your payment is confirmed.</p>
+      )}
+      {!locked && (
       <form onSubmit={send} className="mt-2 flex gap-2">
         <input
           value={text}
@@ -94,6 +111,7 @@ export default function OrderChat({ orderId, token, compact = false }) {
           Send
         </button>
       </form>
+      )}
       {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   )

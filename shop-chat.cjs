@@ -1,8 +1,9 @@
 'use strict'
 // Website order chat for the JohnKaptain Academic Tools Bot.
 //
-// - Every paid-product order gets a secret token (kept only in the buyer's
-//   browser). With it the buyer can read and send messages for that order.
+// - Every product order gets a secret token (kept only in the buyer's
+//   browser). With it the buyer can read messages for that order, and send
+//   them once the order is paid (unpaid checkouts cannot reach Telegram).
 // - A buyer message is sent to the admin's Telegram chat with a "💬 Reply"
 //   button. The admin answers by tapping Reply (then typing) or by simply
 //   swipe-replying to any message about that order. The answer is stored on
@@ -14,6 +15,8 @@ const crypto = require('crypto')
 
 const MAX_MESSAGE_CHARS = 2000
 const CLIENT_LIMIT_PER_HOUR = 15
+const REPLY_MODE_MS = 15 * 60 * 1000 // Reply mode stays open for several messages/files
+const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024 // Telegram Bot API download limit
 
 const sha256 = value => crypto.createHash('sha256').update(String(value)).digest('hex')
 function safeEqual(a, b) {
@@ -22,7 +25,7 @@ function safeEqual(a, b) {
 }
 
 function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminChatId, now = () => Date.now() }) {
-  const pendingReply = new Map() // admin chat id -> orderId (Reply button pressed)
+  const pendingReply = new Map() // admin chat id -> { orderId, until } (Reply button pressed)
   const rate = new Map()
 
   function issueToken(orderId) {
@@ -46,13 +49,17 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
       amount: order.amount,
       status: order.status,
       paid: order.paymentState === 'COMPLETE',
-      messages: (order.messages || []).slice(-50),
+      // File ids stay on the server; the page gets a download key only.
+      messages: (order.messages || []).slice(-50).map(m =>
+        m.file ? { ...m, file: { key: m.file.key, name: m.file.name, size: m.file.size } } : m),
     }
   }
 
-  function addMessage(orderId, from, text) {
+  function addMessage(orderId, from, text, file = null) {
     const order = getOrder(orderId)
-    const messages = [...(order.messages || []), { at: now(), from, text }]
+    const entry = { at: now(), from, text }
+    if (file) entry.file = file
+    const messages = [...(order.messages || []), entry]
     return upsertOrder(orderId, { messages: messages.slice(-200) })
   }
 
@@ -81,6 +88,8 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
 
   async function clientMessage(order, rawText) {
     const text = String(rawText || '').replace(/\s+\n/g, '\n').trim().slice(0, MAX_MESSAGE_CHARS)
+    // Only paid orders can message, so unpaid checkouts cannot flood Telegram.
+    if (order.paymentState !== 'COMPLETE') { const e = new Error('Chat opens once your payment is confirmed.'); e.status = 403; throw e }
     if (text.length < 1) { const e = new Error('Write a message first.'); e.status = 400; throw e }
     const t = now()
     const hits = (rate.get(order.id) || []).filter(x => t - x < 3600_000)
@@ -95,9 +104,26 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
       '',
       text,
       '',
-      'Tap 💬 Reply (or swipe-reply to this message) to answer on the website.',
+      'Tap 💬 Reply (or swipe-reply to this message) to answer — text or files — on the website.',
     ].join('\n')).catch(err => console.error('Shop chat: admin notification failed:', err.message))
     return view(getOrder(order.id))
+  }
+
+  // Attachment on an admin message (document, photo, video, audio, voice).
+  function attachmentOf(message) {
+    const pick = (f, fallbackName) => f && {
+      telegramFileId: f.file_id, name: f.file_name || fallbackName, size: Number(f.file_size || 0), mime: f.mime_type || '',
+    }
+    if (message.document) return pick(message.document, 'document')
+    if (Array.isArray(message.photo) && message.photo.length) return pick(message.photo[message.photo.length - 1], `photo-${message.message_id || 1}.jpg`)
+    if (message.video) return pick(message.video, 'video.mp4')
+    if (message.audio) return pick(message.audio, 'audio.mp3')
+    if (message.voice) return pick(message.voice, 'voice-note.ogg')
+    return null
+  }
+
+  function findFile(order, key) {
+    return (order.messages || []).map(m => m.file).find(f => f && f.key === String(key)) || null
   }
 
   // Telegram webhook update from the admin.
@@ -110,11 +136,17 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
       const order = m ? getOrder(m[1]) : null
       await telegramApi('answerCallbackQuery', { callback_query_id: callback.id, text: order ? 'Reply mode opened' : 'Order not found' }).catch(() => {})
       if (!order) return
-      pendingReply.set(chatId, order.id)
-      await telegramApi('sendMessage', {
+      pendingReply.set(chatId, { orderId: order.id, until: now() + REPLY_MODE_MS })
+      // force_reply makes the next message a reply to this prompt, so it is
+      // matched to the order even in a group chat with privacy mode on.
+      const prompt = await telegramApi('sendMessage', {
         chat_id: chatId,
-        text: `✍️ Reply mode for ${order.id} (${order.productName}).\nSend your message now — it will appear on the customer's order page.\nSend /cancel to stop.`,
+        text: `✍️ Reply mode for ${order.id} (${order.productName}).\n` +
+          'Send messages, documents or photos now (several are fine) — each appears on the customer\'s order page.\n' +
+          'Send /done when finished.',
+        reply_markup: { force_reply: true, input_field_placeholder: `Message or file for ${order.id}` },
       })
+      rememberTelegramMessage(order.id, prompt?.result?.message_id)
       return
     }
 
@@ -123,26 +155,40 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
     const chatId = String(message.chat?.id || '')
     if (chatId !== String(adminChatId)) return
     const text = String(message.text || message.caption || '').trim()
-    if (text === '/cancel') {
+    if (text === '/cancel' || text === '/done') {
       pendingReply.delete(chatId)
       await telegramApi('sendMessage', { chat_id: chatId, text: 'Reply mode closed.' })
       return
     }
     // Swipe-reply to an order message takes priority over the Reply button.
     const replied = message.reply_to_message ? orderForTelegramMessage(message.reply_to_message.message_id) : null
-    const orderId = replied?.id || pendingReply.get(chatId)
-    if (!orderId || !text || text.startsWith('/')) return
-    addMessage(orderId, 'support', text)
-    if (!replied) pendingReply.delete(chatId)
+    const pending = pendingReply.get(chatId)
+    const active = pending && pending.until > now() ? pending : null
+    if (pending && !active) pendingReply.delete(chatId)
+    const orderId = replied?.id || active?.orderId
+    const attachment = attachmentOf(message)
+    if (!orderId || (!text && !attachment) || (!attachment && text.startsWith('/'))) return
+
+    if (attachment && attachment.size > MAX_DOWNLOAD_BYTES) {
+      await telegramApi('sendMessage', {
+        chat_id: chatId,
+        text: `⚠️ ${attachment.name} is larger than 20 MB, which Telegram does not allow bots to pass on. Share a link instead (e.g. Google Drive).`,
+      })
+      return
+    }
+    const file = attachment ? { ...attachment, key: crypto.randomBytes(8).toString('hex') } : null
+    addMessage(orderId, 'support', text, file)
+    if (active && active.orderId === orderId) active.until = now() + REPLY_MODE_MS
     const confirmation = await telegramApi('sendMessage', {
       chat_id: chatId,
-      text: `✅ Sent to the customer on the website (${orderId}).`,
+      text: `✅ ${file ? 'File' : 'Message'} sent to the customer on the website (${orderId}).` +
+        (active && active.orderId === orderId ? '\nKeep sending, or /done to finish.' : ''),
       reply_markup: replyMarkup(orderId),
     })
     rememberTelegramMessage(orderId, confirmation?.result?.message_id)
   }
 
-  return { issueToken, authorize, view, clientMessage, handleUpdate, notifyAdmin, rememberTelegramMessage, replyMarkup }
+  return { issueToken, authorize, view, clientMessage, handleUpdate, notifyAdmin, rememberTelegramMessage, replyMarkup, findFile }
 }
 
 module.exports = { createShopChat, sha256 }
