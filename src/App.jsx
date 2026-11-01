@@ -6,6 +6,8 @@ import ReportsCheckout from './components/ReportsCheckout.jsx'
 import TurnitinCard from './components/TurnitinCard.jsx'
 import { reportsApi, savedOrders, lastSeen } from './reportsApi.js'
 import Footer from './components/Footer.jsx'
+import ShopOrders from './components/ShopOrders.jsx'
+import { shopChat, savedShopOrders, shopLastSeen } from './shopChat.js'
 import { CATEGORIES as ALL_CATEGORIES } from './data.js'
 
 // The Turnitin reports section leads the page.
@@ -46,6 +48,28 @@ export default function App() {
   const [reportsOrder, setReportsOrder] = useState(null)
   const [supportNotice, setSupportNotice] = useState(null)
   const [hasOrders, setHasOrders] = useState(false)
+  const [shopOpen, setShopOpen] = useState(false)
+  const [shopCount, setShopCount] = useState(() => savedShopOrders().length)
+  const [shopUnread, setShopUnread] = useState([])
+
+  // Replies from JK Support (Telegram) to this device's tool/service orders.
+  const checkShopReplies = () => {
+    const saved = savedShopOrders()
+    setShopCount(saved.length)
+    Promise.all(
+      saved.map(o =>
+        shopChat
+          .thread(o.orderId, o.token)
+          .then(t => ((t.messages || []).some(m => m.from === 'support' && m.at > shopLastSeen(o.orderId)) ? o.orderId : null))
+          .catch(() => null),
+      ),
+    ).then(ids => setShopUnread(ids.filter(Boolean)))
+  }
+  useEffect(() => {
+    checkShopReplies()
+    const timer = setInterval(checkShopReplies, 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Live price from the JK Turnitin Bot (same as Telegram).
   useEffect(() => {
@@ -202,7 +226,22 @@ export default function App() {
 
       <Footer />
 
-      <Modal open={!!modalItem} item={modalItem} onClose={() => setModalItem(null)} />
+      <Modal
+        open={!!modalItem}
+        item={modalItem}
+        onClose={() => {
+          setModalItem(null)
+          checkShopReplies()
+        }}
+      />
+      <ShopOrders
+        open={shopOpen}
+        unread={shopUnread}
+        onClose={() => {
+          setShopOpen(false)
+          checkShopReplies()
+        }}
+      />
       <ReportsCheckout
         open={reportsOpen}
         presetType={reportsType}
@@ -213,14 +252,30 @@ export default function App() {
         }}
       />
 
-      <a
-        href="https://wa.me/254701730921"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-4 right-4 rounded-2xl px-4 py-2 font-medium shadow bg-green-600 text-white hover:bg-green-700"
-      >
-        WhatsApp
-      </a>
+      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+        {shopCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShopOpen(true)}
+            className="relative rounded-2xl px-4 py-2 font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
+          >
+            💬 My orders
+            {shopUnread.length > 0 && (
+              <span className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white text-xs px-2 py-0.5">
+                {shopUnread.length}
+              </span>
+            )}
+          </button>
+        )}
+        <a
+          href="https://wa.me/254701730921"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-2xl px-3 py-1.5 text-sm font-medium shadow bg-green-600 text-white hover:bg-green-700"
+        >
+          WhatsApp
+        </a>
+      </div>
     </div>
   )
 }

@@ -10,7 +10,8 @@
     "preview": "vite preview --port 4173",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -b gh-pages",
-    "server": "node server.cjs"
+    "server": "node server.cjs",
+    "test": "node tests/shop-chat.test.cjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

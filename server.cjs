@@ -32,10 +32,16 @@ const BUSINESS_WHATSAPP_NUMBER = String(process.env.BUSINESS_WHATSAPP_NUMBER || 
 const TELEGRAM_BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim()
 const TELEGRAM_ADMIN_CHAT_ID = String(process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim()
 
-const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(v => v.trim())
-  .filter(Boolean)
+// The site's own domain is always allowed; ALLOWED_ORIGINS adds more.
+const ALLOWED_ORIGINS = [...new Set([
+  'https://jkacademictoolshub.com',
+  'https://www.jkacademictoolshub.com',
+  ...String(process.env.ALLOWED_ORIGINS || '').split(','),
+].map(v => v.trim()).filter(Boolean))]
+
+// Telegram webhook for admin replies (website order chat).
+const TELEGRAM_WEBHOOK_SECRET = String(process.env.TELEGRAM_WEBHOOK_SECRET || '').trim()
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '')
 
 const INACTIVE_START_EAT = normalizeHHMM(process.env.INACTIVE_START_EAT, '00:00')
 const INACTIVE_END_EAT = normalizeHHMM(process.env.INACTIVE_END_EAT, '06:00')
@@ -361,35 +367,43 @@ async function intasendCheckPaymentStatus({ invoice_id }) {
   })
 }
 
+async function telegramApi(method, body) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.log('Telegram not configured. ' + method + ':', JSON.stringify(body))
+    return { ok: true, result: {} }
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data?.description || 'Telegram ' + method + ' failed')
+  }
+
+  return data
+}
+
 async function sendTelegramMessage(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
     console.log('Telegram notification not configured. Message would be:')
     console.log(text)
     return
   }
-
-  const response = await fetch(
-    `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text,
-      }),
-    },
-  )
-
-  const data = await response.json().catch(() => ({}))
-
-  if (!response.ok || !data.ok) {
-    throw new Error(data?.description || 'Failed to send Telegram message')
-  }
-
-  return data
+  return telegramApi('sendMessage', { chat_id: TELEGRAM_ADMIN_CHAT_ID, text })
 }
+
+const shopChat = require('./shop-chat.cjs').createShopChat({
+  getOrder: id => getOrder(id),
+  upsertOrder: (id, patch) => upsertOrder(id, patch),
+  listOrders: () => Object.values(orders),
+  telegramApi,
+  adminChatId: TELEGRAM_ADMIN_CHAT_ID,
+})
 
 async function notifyAdmin(order) {
   const text = [
@@ -398,12 +412,16 @@ async function notifyAdmin(order) {
     `Product: ${order.productName}`,
     `Amount: Ksh. ${order.amount}`,
     `Payment number: ${order.paymentPhone}`,
-    `WhatsApp delivery number: ${order.deliveryWhatsAppNumber}`,
     `M-Pesa name: ${order.mpesaName || 'Not provided'}`,
-    `Buyer WhatsApp link: https://wa.me/${order.deliveryWhatsAppNumber}`,
+    order.deliveryWhatsAppNumber
+      ? `WhatsApp (optional contact): https://wa.me/${order.deliveryWhatsAppNumber}`
+      : 'WhatsApp: not provided — use the website chat',
+    '',
+    'Tap 💬 Reply (or swipe-reply) to send the logins to the customer on the website.',
   ].join('\n')
 
-  await sendTelegramMessage(text)
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return sendTelegramMessage(text)
+  await shopChat.notifyAdmin(order.id, text)
 }
 
 async function notifyAdminFailure(order, state) {
@@ -532,7 +550,7 @@ app.use(
       return callback(new Error(`CORS blocked for origin: ${origin}`))
     },
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'X-Order-Token'],
   }),
 )
 
@@ -620,6 +638,7 @@ app.post('/api/checkout', async (req, res) => {
     return res.json({
       ok: true,
       orderId,
+      chatToken: shopChat.issueToken(orderId),
       status: getOrder(orderId)?.status || ORDER_STATUS.PAYMENT_PENDING,
     })
   } catch (err) {
@@ -684,8 +703,11 @@ app.post('/api/delivery-details', async (req, res) => {
       return res.status(400).json({ error: 'Payment is not confirmed yet' })
     }
 
-    const normalizedWhatsApp = normalizePhoneTo254(whatsappNumber)
-    if (!normalizedWhatsApp) {
+    // WhatsApp is optional: the website chat is the main delivery channel.
+    const normalizedWhatsApp = String(whatsappNumber || '').trim()
+      ? normalizePhoneTo254(whatsappNumber)
+      : null
+    if (String(whatsappNumber || '').trim() && !normalizedWhatsApp) {
       return res.status(400).json({ error: 'Invalid WhatsApp number' })
     }
 
@@ -805,6 +827,32 @@ app.post('/intasend/webhook', (req, res) => {
   })
 })
 
+// ---- Website order chat ----
+const chatToken = req => req.headers['x-order-token'] || req.query.token
+app.get('/api/orders/:orderId/messages', (req, res) => {
+  try {
+    const order = shopChat.authorize(req.params.orderId, chatToken(req))
+    return res.json({ ok: true, ...shopChat.view(order) })
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+app.post('/api/orders/:orderId/messages', async (req, res) => {
+  try {
+    const order = shopChat.authorize(req.params.orderId, chatToken(req))
+    return res.json({ ok: true, ...(await shopChat.clientMessage(order, req.body?.text)) })
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+app.post('/telegram/webhook', (req, res) => {
+  if (!TELEGRAM_WEBHOOK_SECRET || req.headers['x-telegram-bot-api-secret-token'] !== TELEGRAM_WEBHOOK_SECRET) {
+    return res.status(401).end()
+  }
+  res.status(200).end()
+  shopChat.handleUpdate(req.body).catch(err => console.error('Telegram update failed:', err.message))
+})
+
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
@@ -823,7 +871,8 @@ app.get('/health', (req, res) => {
     storeFile: STORE_FILE,
     storeFileExists: fs.existsSync(STORE_FILE),
     ordersLoaded: Object.keys(orders).length,
-    deployMarker: 'payment-final-fix-v1',
+    telegramWebhookConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET && PUBLIC_BASE_URL),
+    deployMarker: 'shop-chat-v1',
   })
 })
 
@@ -839,4 +888,15 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || 'none configured'}`)
   console.log(`Inactive payments window (EAT): ${INACTIVE_START_EAT} - ${INACTIVE_END_EAT}`)
+  if (TELEGRAM_BOT_TOKEN && TELEGRAM_WEBHOOK_SECRET && PUBLIC_BASE_URL) {
+    telegramApi('setWebhook', {
+      url: PUBLIC_BASE_URL + '/telegram/webhook',
+      secret_token: TELEGRAM_WEBHOOK_SECRET,
+      allowed_updates: ['message', 'callback_query'],
+    })
+      .then(() => console.log('Telegram webhook set for website order chat'))
+      .catch(err => console.error('Telegram webhook setup failed:', err.message))
+  } else {
+    console.log('Website order chat replies disabled: set TELEGRAM_WEBHOOK_SECRET and PUBLIC_BASE_URL')
+  }
 })
