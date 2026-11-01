@@ -17,6 +17,7 @@ const MAX_MESSAGE_CHARS = 2000
 const CLIENT_LIMIT_PER_HOUR = 15
 const REPLY_MODE_MS = 15 * 60 * 1000 // Reply mode stays open for several messages/files
 const MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024 // Telegram Bot API download limit
+const FILE_TTL_MS = 48 * 60 * 60 * 1000 // website download links expire after 48 h
 
 const sha256 = value => crypto.createHash('sha256').update(String(value)).digest('hex')
 function safeEqual(a, b) {
@@ -51,7 +52,11 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
       paid: order.paymentState === 'COMPLETE',
       // File ids stay on the server; the page gets a download key only.
       messages: (order.messages || []).slice(-50).map(m =>
-        m.file ? { ...m, file: { key: m.file.key, name: m.file.name, size: m.file.size } } : m),
+        m.file
+          ? { ...m, file: now() - m.at > FILE_TTL_MS
+            ? { name: m.file.name, size: m.file.size, expired: true }
+            : { key: m.file.key, name: m.file.name, size: m.file.size } }
+          : m),
     }
   }
 
@@ -126,7 +131,10 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
   }
 
   function findFile(order, key) {
-    return (order.messages || []).map(m => m.file).find(f => f && f.key === String(key)) || null
+    const message = (order.messages || []).find(m => m.file && m.file.key === String(key))
+    if (!message) return null
+    if (now() - message.at > FILE_TTL_MS) { const e = new Error('This file has expired (files are kept 48 h). Ask JK Support to resend it.'); e.status = 410; throw e }
+    return message.file
   }
 
   // Telegram webhook update from the admin.

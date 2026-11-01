@@ -127,6 +127,70 @@ function saveStore() {
   }
 
   fs.writeFileSync(STORE_FILE, JSON.stringify(orders, null, 2), 'utf8')
+  scheduleRemotePush()
+}
+
+// ---- Order list kept on the JK Turnitin Bot's persistent disk ----
+// This service's own disk is wiped on every deploy/restart, so with
+// SHOP_STORE_KEY set (same value on both services) the order list and chats
+// are loaded from and saved to the bot. The local file is only a cache.
+const SHOP_STORE_KEY = String(process.env.SHOP_STORE_KEY || '').trim()
+const SHOP_STORE_URL = String(process.env.SHOP_STORE_URL || 'https://jk-turnitin-telegram-bot.onrender.com/api/shop-store').trim()
+const remoteStore = { enabled: SHOP_STORE_KEY.length >= 16, loaded: false, lastError: null, lastSavedAt: null }
+let remotePushTimer = null
+
+async function remoteStoreRequest(method, body) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 20000)
+  try {
+    const res = await fetch(SHOP_STORE_URL, {
+      method,
+      headers: { Authorization: 'Bearer ' + SHOP_STORE_KEY, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`order store ${method} failed (${res.status})`)
+    return await res.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function loadRemoteStore() {
+  if (!remoteStore.enabled || remoteStore.loaded) return
+  try {
+    const data = await remoteStoreRequest('GET')
+    for (const [id, order] of Object.entries(data.orders || {})) {
+      const local = orders[id]
+      if (!local || Number(order.updatedAt || 0) > Number(local.updatedAt || 0)) orders[id] = order
+    }
+    remoteStore.loaded = true
+    remoteStore.lastError = null
+    console.log(`Order store loaded from the bot: ${Object.keys(data.orders || {}).length} orders`)
+    saveStore()
+  } catch (err) {
+    remoteStore.lastError = err.message
+    console.error('Order store load failed (retrying):', err.message)
+    setTimeout(loadRemoteStore, 15000).unref()
+  }
+}
+
+function scheduleRemotePush(delay = 1500) {
+  // Never push before loading, or an empty list would replace the saved one.
+  if (!remoteStore.enabled || !remoteStore.loaded || remotePushTimer) return
+  remotePushTimer = setTimeout(async () => {
+    remotePushTimer = null
+    try {
+      await remoteStoreRequest('PUT', { orders })
+      remoteStore.lastSavedAt = new Date().toISOString()
+      remoteStore.lastError = null
+    } catch (err) {
+      remoteStore.lastError = err.message
+      console.error('Order store save failed (retrying):', err.message)
+      scheduleRemotePush(30000)
+    }
+  }, delay)
+  remotePushTimer.unref?.()
 }
 
 // Order records are small (no files: those stay on Telegram). Unpaid orders
@@ -979,7 +1043,10 @@ app.get('/health', async (req, res) => {
     ordersLoaded: Object.keys(orders).length,
     telegramWebhookConfigured: Boolean(TELEGRAM_WEBHOOK_SECRET && TELEGRAM_WEBHOOK_URL),
     telegramWebhook: await telegramWebhookStatus(),
-    deployMarker: 'shop-chat-v2',
+    orderStore: remoteStore.enabled
+      ? { where: 'JK Turnitin Bot disk', loaded: remoteStore.loaded, lastSavedAt: remoteStore.lastSavedAt, lastError: remoteStore.lastError }
+      : { where: 'this service only (wiped on deploy/restart) — set SHOP_STORE_KEY' },
+    deployMarker: 'shop-chat-v3',
   })
 })
 
@@ -991,7 +1058,8 @@ app.use((err, req, res, next) => {
   return next(err)
 })
 
-app.listen(PORT, () => {
+// Load the saved orders (up to 20 s) before taking requests.
+Promise.race([loadRemoteStore(), new Promise(resolve => setTimeout(resolve, 20000))]).then(() => app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   console.log(`Allowed origins: ${ALLOWED_ORIGINS.join(', ') || 'none configured'}`)
   console.log(`Inactive payments window (EAT): ${INACTIVE_START_EAT} - ${INACTIVE_END_EAT}`)
@@ -1001,6 +1069,6 @@ app.listen(PORT, () => {
   runPrune()
   setInterval(runPrune, 60 * 60 * 1000).unref()
   setInterval(ensureTelegramWebhook, 30 * 60 * 1000).unref()
-})
+}))
 
 module.exports = { pruneOrders }
