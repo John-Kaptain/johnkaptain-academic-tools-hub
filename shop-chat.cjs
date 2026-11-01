@@ -1,8 +1,9 @@
 'use strict'
 // Website order chat for the JohnKaptain Academic Tools Bot.
 //
-// - Every paid-product order gets a secret token (kept only in the buyer's
-//   browser). With it the buyer can read and send messages for that order.
+// - Every product order gets a secret token (kept only in the buyer's
+//   browser). With it the buyer can read messages for that order, and send
+//   them once the order is paid (unpaid checkouts cannot reach Telegram).
 // - A buyer message is sent to the admin's Telegram chat with a "💬 Reply"
 //   button. The admin answers by tapping Reply (then typing) or by simply
 //   swipe-replying to any message about that order. The answer is stored on
@@ -81,6 +82,8 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
 
   async function clientMessage(order, rawText) {
     const text = String(rawText || '').replace(/\s+\n/g, '\n').trim().slice(0, MAX_MESSAGE_CHARS)
+    // Only paid orders can message, so unpaid checkouts cannot flood Telegram.
+    if (order.paymentState !== 'COMPLETE') { const e = new Error('Chat opens once your payment is confirmed.'); e.status = 403; throw e }
     if (text.length < 1) { const e = new Error('Write a message first.'); e.status = 400; throw e }
     const t = now()
     const hits = (rate.get(order.id) || []).filter(x => t - x < 3600_000)

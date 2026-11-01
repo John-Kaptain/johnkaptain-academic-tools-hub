@@ -25,6 +25,7 @@ Object.assign(process.env, {
 // Simulated outside world.
 const telegramCalls = []
 let messageId = 500
+let intasendState = 'COMPLETE'
 const realFetch = global.fetch
 global.fetch = async (url, options = {}) => {
   const href = String(url)
@@ -36,8 +37,8 @@ global.fetch = async (url, options = {}) => {
   }
   if (href.startsWith('https://api.intasend.com/')) {
     // STK push accepted and immediately complete.
-    return { ok: true, status: 200, text: async () => JSON.stringify({ invoice: { invoice_id: 'INV1', state: 'COMPLETE' } }),
-      json: async () => ({ invoice: { invoice_id: 'INV1', state: 'COMPLETE' } }) }
+    const body = { invoice: { invoice_id: 'INV1', state: intasendState } }
+    return { ok: true, status: 200, text: async () => JSON.stringify(body), json: async () => body }
   }
   return realFetch(url, options)
 }
@@ -119,9 +120,22 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   thread = (await api(`/api/orders/${orderId}/messages`, { headers: auth })).body
   assert(!thread.messages.some(m => m.text === 'note to self'))
 
+  // 8. Unpaid orders cannot message (no Telegram flooding from abandoned checkouts).
+  intasendState = 'PENDING'
+  const unpaid = await api('/api/checkout', { method: 'POST', headers: site, body: JSON.stringify({ productId: 'grammarly-premium', paymentPhone: '0712345679' }) })
+  assert.equal(unpaid.status, 200, JSON.stringify(unpaid.body))
+  const before = telegramCalls.length
+  const blocked = await api(`/api/orders/${unpaid.body.orderId}/messages`, { method: 'POST', headers: { ...site, 'X-Order-Token': unpaid.body.chatToken }, body: JSON.stringify({ text: 'spam' }) })
+  assert.equal(blocked.status, 403)
+  assert.equal(telegramCalls.slice(before).filter(c => /Website customer message/.test(c.body.text || '')).length, 0, 'nothing sent to Telegram')
+  const unpaidThread = (await api(`/api/orders/${unpaid.body.orderId}/messages`, { headers: { ...site, 'X-Order-Token': unpaid.body.chatToken } })).body
+  assert.equal(unpaidThread.paid, false)
+  assert.deepEqual(unpaidThread.messages, [])
+
   fs.rmSync(dir, { recursive: true, force: true })
   console.log('PASS: checkout issues a chat key; WhatsApp optional; paid alert has 💬 Reply')
   console.log('PASS: customer message -> admin with Reply; Reply button and swipe-reply -> order page')
   console.log('PASS: wrong key, wrong webhook secret, non-admin chats and /cancel all handled')
+  console.log('PASS: unpaid orders cannot send messages; nothing reaches Telegram')
   process.exit(0)
 })().catch(err => { console.error(err); process.exit(1) })

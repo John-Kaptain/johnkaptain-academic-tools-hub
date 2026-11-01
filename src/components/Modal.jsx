@@ -160,14 +160,11 @@ export default function Modal({ open, item, onClose }) {
       })
 
       setOrderId(response.orderId)
-      if (response.chatToken) {
-        setChatToken(response.chatToken)
-        rememberShopOrder({ orderId: response.orderId, token: response.chatToken, product: item.name })
-      }
+      if (response.chatToken) setChatToken(response.chatToken)
       setStep('waiting')
       setStatusMessage('STK Push sent. Complete the payment on your phone.')
 
-      startPolling(response.orderId)
+      startPolling(response.orderId, response.chatToken)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -175,7 +172,10 @@ export default function Modal({ open, item, onClose }) {
     }
   }
 
-  function startPolling(newOrderId) {
+  function startPolling(newOrderId, newChatToken) {
+    // Saved under 💬 My orders only once paid (the chat is for paid orders).
+    const rememberPaid = () =>
+      newChatToken && rememberShopOrder({ orderId: newOrderId, token: newChatToken, product: item.name })
     let tries = 0
     const maxTries = 150
 
@@ -204,6 +204,7 @@ export default function Modal({ open, item, onClose }) {
         ) {
           clearInterval(pollRef.current)
           pollRef.current = null
+          rememberPaid()
           setStep('delivery')
           setStatusMessage('')
           return
@@ -215,6 +216,7 @@ export default function Modal({ open, item, onClose }) {
         ) {
           clearInterval(pollRef.current)
           pollRef.current = null
+          rememberPaid()
           setStep('success')
           return
         }
@@ -313,8 +315,6 @@ export default function Modal({ open, item, onClose }) {
             <div className="rounded-2xl bg-gray-100 dark:bg-slate-800 p-4 text-sm">
               {statusMessage || 'Waiting for payment confirmation...'}
             </div>
-
-            {chatToken && <OrderChat orderId={orderId} token={chatToken} compact />}
 
             <div className="flex gap-3 justify-end">
               <button type="button" className="btn btn-outline" onClick={onClose}>
