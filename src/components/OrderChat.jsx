@@ -81,7 +81,12 @@ export default function OrderChat({ orderId, token, compact = false }) {
               {m.from === 'support' ? 'JK Support' : 'You'} · {new Date(m.at).toLocaleString()}
             </div>
             {m.text}
-            {m.file && (
+            {m.file?.expired && (
+              <div className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+                📎 {m.file.name} — expired (files are kept 48 h). Ask JK Support to resend it.
+              </div>
+            )}
+            {m.file && !m.file.expired && (
               <a
                 href={shopFileUrl(orderId, token, m.file.key)}
                 className="mt-1 flex items-center gap-2 rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-2 py-1.5 font-medium text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-slate-800"

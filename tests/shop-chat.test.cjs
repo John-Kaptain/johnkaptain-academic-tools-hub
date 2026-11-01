@@ -158,6 +158,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms))
   assert.equal(await photo.text(), '%PDF-1.4 coursehero unlock for PBIG.pdf', 'largest photo size is delivered')
   assert.equal((await realFetch(`${base}/api/orders/${orderId}/files/${files[0].file.key}?token=wrong`)).status, 404)
 
+  // 6b2. Download links expire after 48 h (file stays in Telegram).
+  {
+    const store = JSON.parse(fs.readFileSync(process.env.ORDER_STORE_FILE, 'utf8'))
+    assert(store[orderId].messages.some(m => m.file), 'file messages stored')
+  }
+
   // 6c. Health shows Telegram's view of the webhook.
   const health = (await api('/health')).body
   assert.equal(health.telegramWebhook.ok, true)
