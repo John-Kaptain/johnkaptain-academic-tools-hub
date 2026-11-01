@@ -39,6 +39,8 @@ export const reportsApi = {
     call(`/api/web/orders/${orderId}/resend`, { method: 'POST', token, json: phone ? { phone } : {} }),
   cancel: (orderId, token) => call(`/api/web/orders/${orderId}/cancel`, { method: 'POST', token }),
   deleteData: (orderId, token) => call(`/api/web/orders/${orderId}/delete`, { method: 'POST', token }),
+  message: (orderId, token, text) => call(`/api/web/orders/${orderId}/message`, { method: 'POST', token, json: { text } }),
+  proof: (orderId, token, text) => call(`/api/web/orders/${orderId}/proof`, { method: 'POST', token, json: { text } }),
   status: (orderId, token) => call(`/api/web/orders/${orderId}`, { token }),
   reportUrl: (orderId, token, reportId) =>
     `${REPORTS_API}/api/web/orders/${orderId}/reports/${reportId}?token=${encodeURIComponent(token)}`,
@@ -66,6 +68,25 @@ export function rememberOrder(orderId, token) {
 export function forgetOrder(orderId) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(savedOrders().filter(o => o.orderId !== orderId)))
+  } catch {
+    /* ignore */
+  }
+}
+
+// Support messages the customer has already seen, per order (this device).
+const SEEN_KEY = 'jk-report-seen'
+export function lastSeen(orderId) {
+  try {
+    return Number(JSON.parse(localStorage.getItem(SEEN_KEY) || '{}')[orderId] || 0)
+  } catch {
+    return 0
+  }
+}
+export function markSeen(orderId, at) {
+  try {
+    const seen = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}')
+    seen[orderId] = Math.max(Number(seen[orderId] || 0), Number(at || Date.now()))
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen))
   } catch {
     /* ignore */
   }

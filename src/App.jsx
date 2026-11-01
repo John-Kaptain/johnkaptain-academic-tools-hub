@@ -4,7 +4,7 @@ import Card from './components/Card.jsx'
 import Modal from './components/Modal.jsx'
 import ReportsCheckout from './components/ReportsCheckout.jsx'
 import TurnitinCard from './components/TurnitinCard.jsx'
-import { reportsApi } from './reportsApi.js'
+import { reportsApi, savedOrders, lastSeen } from './reportsApi.js'
 import Footer from './components/Footer.jsx'
 import { CATEGORIES as ALL_CATEGORIES } from './data.js'
 
@@ -43,6 +43,9 @@ export default function App() {
   const [reportsOpen, setReportsOpen] = useState(false)
   const [reportsType, setReportsType] = useState(null)
   const [reportsConfig, setReportsConfig] = useState(null)
+  const [reportsOrder, setReportsOrder] = useState(null)
+  const [supportNotice, setSupportNotice] = useState(null)
+  const [hasOrders, setHasOrders] = useState(false)
 
   // Live price from the JK Turnitin Bot (same as Telegram).
   useEffect(() => {
@@ -52,8 +55,28 @@ export default function App() {
       .catch(() => {})
   }, [])
 
-  const openReports = type => {
+  // Replies from JK Support to this device's orders, shown on the card.
+  const checkSupportReplies = () => {
+    const saved = savedOrders()
+    setHasOrders(saved.length > 0)
+    Promise.all(
+      saved.map(o =>
+        reportsApi
+          .status(o.orderId, o.token)
+          .then(r => ({ o, unread: (r.status.messages || []).some(m => m.kind === 'support' && m.at > lastSeen(o.orderId)) }))
+          .catch(() => ({ o, unread: false })),
+      ),
+    ).then(results => setSupportNotice(results.find(r => r.unread)?.o || null))
+  }
+  useEffect(() => {
+    checkSupportReplies()
+    const timer = setInterval(checkSupportReplies, 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const openReports = (type, savedOrder = null) => {
     setReportsType(type)
+    setReportsOrder(savedOrder)
     setReportsOpen(true)
   }
   const [q, setQ] = useState('')
@@ -160,7 +183,14 @@ export default function App() {
             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {filterItems(cat.items).map(item =>
                 item.id === REPORTS_ITEM ? (
-                  <TurnitinCard key={item.id} config={reportsConfig} onChoose={openReports} />
+                  <TurnitinCard
+                    key={item.id}
+                    config={reportsConfig}
+                    onChoose={openReports}
+                    supportNotice={supportNotice}
+                    hasOrders={hasOrders}
+                    onOpenOrder={o => openReports(null, o)}
+                  />
                 ) : (
                   <Card key={item.id} item={item} onOpen={setModalItem} />
                 ),
@@ -173,7 +203,15 @@ export default function App() {
       <Footer />
 
       <Modal open={!!modalItem} item={modalItem} onClose={() => setModalItem(null)} />
-      <ReportsCheckout open={reportsOpen} presetType={reportsType} onClose={() => setReportsOpen(false)} />
+      <ReportsCheckout
+        open={reportsOpen}
+        presetType={reportsType}
+        openOrder={reportsOrder}
+        onClose={() => {
+          setReportsOpen(false)
+          checkSupportReplies()
+        }}
+      />
 
       <a
         href="https://wa.me/254701730921"
