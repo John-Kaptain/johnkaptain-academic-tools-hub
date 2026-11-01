@@ -37,7 +37,7 @@ export default function Footer() {
         </div>
 
         <div className="text-sm text-slate-200/90">
-          © 2025 Academic Tools Hub. All rights reserved.
+          © {new Date().getFullYear()} JK Academic Tools Hub. All rights reserved.
         </div>
       </div>
     </footer>

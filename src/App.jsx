@@ -102,7 +102,7 @@ export default function App() {
         <div className="container-narrow py-10 sm:py-16">
           <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-6 shadow max-w-5xl">
             <h1 className="text-3xl sm:text-5xl font-extrabold text-black dark:text-white tracking-tight">
-              Welcome to the JohnKaptain Academic Tools Hub
+              Welcome to the JK Academic Tools Hub
             </h1>
 
             <p className="mt-3 text-gray-800 dark:text-gray-200 text-base sm:text-lg max-w-3xl leading-relaxed">
@@ -116,7 +116,7 @@ export default function App() {
 
               <div className="mt-3 space-y-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                 <p>
-                  JohnKaptain Academic Tools Hub helps users discover AI humanizers,
+                  JK Academic Tools Hub helps users discover AI humanizers,
                   content generation support, Turnitin guidance, training resources, and other
                   useful academic services.
                 </p>
@@ -143,10 +143,10 @@ export default function App() {
         <section className="py-8">
           <div className="rounded-2xl bg-white dark:bg-slate-900 shadow px-5 sm:px-6 py-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              About JohnKaptain Academic Tools Hub
+              About JK Academic Tools Hub
             </h2>
             <p className="mt-3 text-gray-800 dark:text-gray-200 max-w-4xl leading-relaxed">
-              JohnKaptain Academic Tools Hub helps users discover academic tools, study support,
+              JK Academic Tools Hub helps users discover academic tools, study support,
               training resources, and digital services in a simple searchable hub. The platform
               is designed to make it easier to access academic solutions, research support, and
               helpful online services from one place.
