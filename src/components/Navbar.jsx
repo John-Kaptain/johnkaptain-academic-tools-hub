@@ -33,7 +33,7 @@ export default function Navbar({
             className="text-left"
           >
             <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
-              JohnKaptain Academic
+              JK Academic
             </span>
             <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
               Tools Hub
