@@ -70,9 +70,14 @@ export default function TurnitinCard({ config, onChoose, supportNotice, hasOrder
           </div>
         )}
 
-        {hasOrders && !supportNotice && (
-          <button className="mt-2 self-start text-xs underline text-blue-700 dark:text-blue-300" onClick={() => onOpenOrder(null)}>
-            My orders on this device
+        {hasOrders && (
+          <button
+            type="button"
+            className="mt-3 w-full rounded-xl border-2 border-emerald-700 bg-white px-4 py-3 text-center text-sm font-extrabold text-emerald-900 shadow transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-emerald-400 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-slate-800"
+            onClick={() => onOpenOrder(null)}
+            aria-label="View my Turnitin orders and download reports"
+          >
+            📁 View My Turnitin Orders & Reports
           </button>
         )}
         {discount?.enabled && discount.requiresCode && !unavailable && (
