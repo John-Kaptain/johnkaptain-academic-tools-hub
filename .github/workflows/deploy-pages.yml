@@ -1,0 +1,61 @@
+name: Build and publish JK Academic Tools Hub
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+      - "postcss.config.js"
+      - "tailwind.config.js"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: github-pages-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify application tests
+        run: npm test
+
+      - name: Build production website
+        run: npm run build
+
+      - name: Verify Turnitin orders buttons in generated assets
+        run: |
+          grep -Rq "View My Turnitin Orders" dist/assets
+          grep -Rq "Other Service Orders" dist/assets
+          test -f dist/CNAME
+          grep -qx "jkacademictoolshub.com" dist/CNAME
+
+      - name: Publish built website to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          cname: jkacademictoolshub.com
+          enable_jekyll: false
