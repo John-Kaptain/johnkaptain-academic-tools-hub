@@ -88,7 +88,7 @@ function formatSize(bytes) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`
 }
 
-export default function ReportsCheckout({ open, presetType, openOrder, onClose }) {
+export default function ReportsCheckout({ open, presetType, openOrder, ordersFirst = false, onClose }) {
   const [config, setConfig] = useState(null)
   const [configError, setConfigError] = useState('')
   const [files, setFiles] = useState([]) // { file, type, filter }
@@ -99,6 +99,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [recent, setRecent] = useState([])
+  const [showOrdersFirst, setShowOrdersFirst] = useState(false)
   const [note, setNote] = useState('')
   const [sms, setSms] = useState('')
   const pollRef = useRef(null)
@@ -108,6 +109,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
     if (!open) return
     setConfigError('')
     setRecent(savedOrders())
+    setShowOrdersFirst(Boolean(ordersFirst && !openOrder))
     reportsApi.config().then(setConfig).catch(err => setConfigError(err.message))
     if (openOrder) openSaved(openOrder)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,6 +126,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
       setStatus(null)
       setBusy('')
       setError('')
+      setShowOrdersFirst(false)
     }
   }, [open])
 
@@ -298,7 +301,9 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
   }
 
   function openSaved(saved) {
+    setShowOrdersFirst(false)
     setOrder(saved)
+    setStatus(null)
     startPolling(saved.orderId, saved.token)
   }
 
@@ -341,7 +346,17 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
           </div>
         )}
 
-        {config && config.enabled && config.open && showForm && (
+        {showOrdersFirst && !order && (
+          <div className="mt-5 rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950/30">
+            <p className="font-semibold text-emerald-900 dark:text-emerald-200">Your Turnitin orders and reports</p>
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">Choose an existing order below to see its status and download available reports.</p>
+            <button type="button" className="btn btn-outline mt-3" onClick={() => setShowOrdersFirst(false)}>
+              ➕ Start a new Turnitin check
+            </button>
+          </div>
+        )}
+
+        {config && config.enabled && config.open && showForm && !showOrdersFirst && (
           <form onSubmit={pay} className="mt-5 space-y-4">
             {config.discount?.enabled && config.discount.timeText && (
               <p className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm">
@@ -603,7 +618,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, onClose }
 
         {!order && recent.length > 0 && (
           <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="text-sm font-semibold">Your recent orders on this device</div>
+            <div className="text-sm font-semibold">{showOrdersFirst ? 'Your Turnitin orders on this device' : 'Your recent orders on this device'}</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {recent.map(o => (
                 <span key={o.orderId} className="inline-flex items-center gap-1">

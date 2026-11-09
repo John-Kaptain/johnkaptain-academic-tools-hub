@@ -46,6 +46,7 @@ export default function App() {
   const [reportsType, setReportsType] = useState(null)
   const [reportsConfig, setReportsConfig] = useState(null)
   const [reportsOrder, setReportsOrder] = useState(null)
+  const [reportsOrdersFirst, setReportsOrdersFirst] = useState(false)
   const [supportNotice, setSupportNotice] = useState(null)
   const [hasOrders, setHasOrders] = useState(false)
   const [shopOpen, setShopOpen] = useState(false)
@@ -98,9 +99,10 @@ export default function App() {
     return () => clearInterval(timer)
   }, [])
 
-  const openReports = (type, savedOrder = null) => {
+  const openReports = (type, savedOrder = null, ordersFirst = false) => {
     setReportsType(type)
     setReportsOrder(savedOrder)
+    setReportsOrdersFirst(ordersFirst)
     setReportsOpen(true)
   }
   const [q, setQ] = useState('')
@@ -213,7 +215,7 @@ export default function App() {
                     onChoose={openReports}
                     supportNotice={supportNotice}
                     hasOrders={hasOrders}
-                    onOpenOrder={o => openReports(null, o)}
+                    onOpenOrder={o => openReports(null, o, !o)}
                   />
                 ) : (
                   <Card key={item.id} item={item} onOpen={setModalItem} />
@@ -246,6 +248,7 @@ export default function App() {
         open={reportsOpen}
         presetType={reportsType}
         openOrder={reportsOrder}
+        ordersFirst={reportsOrdersFirst}
         onClose={() => {
           setReportsOpen(false)
           checkSupportReplies()
@@ -253,13 +256,28 @@ export default function App() {
       />
 
       <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+        {hasOrders && (
+          <button
+            type="button"
+            onClick={() => openReports(null, null, true)}
+            className="relative rounded-2xl px-4 py-2 text-sm font-bold shadow-lg bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+            aria-label="Open my Turnitin orders and download reports"
+          >
+            📁 Turnitin Orders & Reports
+            {supportNotice && (
+              <span className="absolute -top-2 -right-2 rounded-full bg-rose-600 text-white text-xs px-2 py-0.5" aria-label="New support message">
+                1
+              </span>
+            )}
+          </button>
+        )}
         {shopCount > 0 && (
           <button
             type="button"
             onClick={() => setShopOpen(true)}
             className="relative rounded-2xl px-4 py-2 font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
           >
-            💬 My orders
+            💬 Other Service Orders
             {shopUnread.length > 0 && (
               <span className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white text-xs px-2 py-0.5">
                 {shopUnread.length}
