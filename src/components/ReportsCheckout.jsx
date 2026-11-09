@@ -434,7 +434,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
                       title="Similarity filtering"
                     >
                       <option value="FILTERED">Filter quotes + bibliography</option>
-                      <option value="UNFILTERED">Do not filter</option>
+                      {config.clientUnfilteredAvailable !== false && <option value="UNFILTERED">Do not filter</option>}
                     </select>
                   )}
                 </div>
