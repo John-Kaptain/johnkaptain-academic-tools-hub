@@ -134,7 +134,6 @@ export default function App() {
     unlocks: 'bg-indigo-50 dark:bg-indigo-900/20',
     vpn: 'bg-fuchsia-50 dark:bg-fuchsia-900/20',
     entertainment: 'bg-rose-50 dark:bg-rose-900/20',
-    training: 'bg-teal-50 dark:bg-teal-900/20',
   }
 
   return (
@@ -148,9 +147,9 @@ export default function App() {
       />
 
       <section className="hero relative">
-        <div className="container-narrow py-10 sm:py-16">
-          <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-6 shadow max-w-5xl">
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-black dark:text-white tracking-tight">
+        <div className="container-narrow py-5 sm:py-6">
+          <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-4 shadow">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-black dark:text-white tracking-tight">
               Welcome to the JK Academic Tools Hub
             </h1>
 
@@ -158,7 +157,7 @@ export default function App() {
               Academic tools and services for students, researchers, and online workers.
             </p>
 
-            <details className="mt-4 rounded-xl bg-gray-50 dark:bg-slate-800 px-4 py-3">
+            <details className="mt-3 rounded-xl bg-gray-50 dark:bg-slate-800 px-4 py-3">
               <summary className="cursor-pointer font-medium text-gray-900 dark:text-gray-100">
                 More about this site
               </summary>
@@ -166,7 +165,7 @@ export default function App() {
               <div className="mt-3 space-y-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                 <p>
                   JK Academic Tools Hub helps users discover AI humanizers,
-                  content generation support, Turnitin guidance, training resources, and other
+                  content generation support, Turnitin reports, and other
                   useful academic services.
                 </p>
 
@@ -177,10 +176,11 @@ export default function App() {
             </details>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4">
             <input
               value={q}
               onChange={e => setQ(e.target.value)}
+              aria-label="Search academic tools and services"
               placeholder="Search academic tools and services..."
               className="w-full sm:w-96 rounded-2xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-500 outline-none shadow border border-gray-200"
             />
@@ -188,25 +188,11 @@ export default function App() {
         </div>
       </section>
 
-      <main className="container-narrow">
-        <section className="py-8">
-          <div className="rounded-2xl bg-white dark:bg-slate-900 shadow px-5 sm:px-6 py-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              About JK Academic Tools Hub
-            </h2>
-            <p className="mt-3 text-gray-800 dark:text-gray-200 max-w-4xl leading-relaxed">
-              JK Academic Tools Hub helps users discover academic tools, study support,
-              training resources, and digital services in a simple searchable hub. The platform
-              is designed to make it easier to access academic solutions, research support, and
-              helpful online services from one place.
-            </p>
-          </div>
-        </section>
-
+      <main className="container-narrow space-y-4 pb-6">
         {CATEGORIES.map(cat => (
-          <section key={cat.id} id={cat.id} className={`py-10 rounded-2xl ${sectionBg[cat.id]}`}>
+          <section key={cat.id} id={cat.id} className={`px-3 sm:px-4 py-5 rounded-2xl ${sectionBg[cat.id]}`}>
             <h2 className="section-title">{cat.title}</h2>
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filterItems(cat.items).map(item =>
                 item.id === REPORTS_ITEM ? (
                   <TurnitinCard
