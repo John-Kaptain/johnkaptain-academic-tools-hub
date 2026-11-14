@@ -1,4 +1,4 @@
-﻿// All categories, services, prices, images, and descriptions
+// All categories, services, prices, images, and descriptions
 
 export const CATEGORIES = [
   // =========================
@@ -32,15 +32,6 @@ export const CATEGORIES = [
           'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGXAsI92fc31yrjiJIpDwpV9AeNx5LsUCIFQ&s',
         description:
           'Transforms AI-generated content for human-like readability, up to 1,500 words per request. Includes unlimited paraphrasing tokens and advanced sentence-level rephrasing, delivering superior grammar, clarity, and style refinement. Monthly subscription.',
-      },
-      {
-        id: 'ai-removal-per-page',
-        name: 'AI Removal Per Page',
-        price: 50,
-        image:
-          'https://i.pinimg.com/280x280_RS/0d/e2/55/0de255e82d2be51b5be798774ffa7477.jpg',
-        description:
-          'AI is removed and the work is proofread using Grammarly. Both AI detection and plagiarism reports are provided. Done in the shortest time possible.',
       },
     ],
   },
@@ -284,24 +275,4 @@ export const CATEGORIES = [
     ],
   },
 
-  // =========================
-  // Academic Writing Training
-  // =========================
-  {
-    id: 'training',
-    title: 'Academic Writing Training',
-    items: [
-      {
-        id: 'training',
-        name: 'Academic Writing Training',
-        price: 2500,
-        image: 'https://pbs.twimg.com/media/E7A5ST2X0AAOl1k.jpg',
-        description:
-          'Learn essay and research paper academic writing using APA, MLA, Chicago, and Harvard styles in 2 weeks. Comprehensive training on writing techniques, formatting, research, and client acquisition.',
-      },
-    ],
-  },
 ]
-
-
-

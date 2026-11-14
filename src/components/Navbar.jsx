@@ -26,16 +26,16 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white shadow-lg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex items-center justify-between gap-3 py-4">
+        <div className="flex items-center justify-between gap-3 py-3">
           <button
             type="button"
             onClick={() => handleJump(sections[0]?.id || 'top')}
-            className="text-left"
+            className="shrink-0 text-left"
           >
-            <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+            <span className="block text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
               JK Academic
             </span>
-            <span className="block text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+            <span className="block text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
               Tools Hub
             </span>
           </button>
@@ -49,8 +49,10 @@ export default function Navbar({
                     key={section.id}
                     type="button"
                     onClick={() => handleJump(section.id)}
-                    className={`rounded-full px-4 py-2 text-sm xl:text-base font-medium transition ${
-                      active
+                    className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                      section.id === 'turnitin-detection'
+                        ? 'bg-white text-blue-700 font-bold shadow hover:bg-blue-50'
+                        : active
                         ? 'bg-white/25 text-white shadow'
                         : 'text-white/95 hover:bg-white/15'
                     }`}
