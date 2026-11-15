@@ -24,7 +24,7 @@ export default function Navbar({
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white shadow-lg">
+    <header className="sticky top-0 z-50 site-header text-white shadow-lg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex items-center justify-between gap-3 py-3">
           <button
@@ -66,7 +66,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={onToggleTheme}
-              className="rounded-2xl bg-green-500 px-4 py-3 font-bold text-white shadow hover:bg-green-600 transition"
+              className="rounded-2xl bg-teal-500 px-4 py-3 font-bold text-white shadow hover:bg-teal-600 transition"
             >
               {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
             </button>
@@ -76,7 +76,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={onToggleTheme}
-              className="rounded-xl bg-green-500 px-3 py-2 text-sm font-bold text-white shadow hover:bg-green-600 transition"
+              className="rounded-xl bg-teal-500 px-3 py-2 text-sm font-bold text-white shadow hover:bg-teal-600 transition"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? 'Dark' : 'Light'}

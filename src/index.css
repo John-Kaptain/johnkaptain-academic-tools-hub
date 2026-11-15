@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Base styles */
 html { scroll-behavior: smooth; }
@@ -11,12 +12,35 @@ html { scroll-behavior: smooth; }
 .btn-outline { @apply border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800; }
 .section-title { @apply text-xl sm:text-2xl font-bold text-left; }
 
-/* Hero background image */
-.hero {
-  background-image: url('https://collection.cloudinary.com/drigj7ypl/687448140b6e854afe4f39abc76c13a9');
-  background-size: cover;
-  background-position: center;
+/* Indigo and teal accents keep the existing compact layout. */
+body { margin: 0; background: #f4f7fc; }
+html.dark body { background: #0b1222; }
+.site-header {
+  background: linear-gradient(115deg, #111d3d, #3730a3 62%, #0f766e);
+  border-bottom: 1px solid #ffffff26;
 }
+.hero {
+  background: radial-gradient(ellipse at top right, #ccfbf166, transparent 65%),
+    linear-gradient(120deg, #eef2ff, #f4f7fc);
+}
+.dark .hero { background: linear-gradient(120deg, #17213d, #0b1222); }
+.card { border: 1px solid #e2e8f0; box-shadow: 0 4px 16px #1725540a; }
+.dark .card { border-color: #334155; }
+.btn-primary {
+  background: linear-gradient(115deg, #4338ca, #4f46e5);
+  box-shadow: 0 3px 8px #4338ca26;
+}
+.btn-primary:hover { background: #3730a3; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn:focus-visible, summary:focus-visible, input:focus-visible {
+  outline: 2px solid #6366f1; outline-offset: 3px;
+}
+.catalog-section { border: 1px solid #e2e8f0; }
+.dark .catalog-section { border-color: #334155; }
+#turnitin-detection { background: #eaf8f4; border-color: #a7dcd0; }
+.dark #turnitin-detection { background: #102c2a; border-color: #285a54; }
+.section-title { color: #24345a; }
+.dark .section-title { color: #e0e7ff; }
 
 /* Section titles stay visible below the sticky menu when jumped to. */
 main section[id] { scroll-margin-top: 6rem; }
