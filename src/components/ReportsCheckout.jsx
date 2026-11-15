@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { reportsApi, rememberOrder, savedOrders, forgetOrder, markSeen } from '../reportsApi.js'
 
+import TurnitinMessages from './TurnitinMessages.jsx'
+
 const TELEGRAM_BOT = 'https://t.me/JKTurnitinBot'
 const STAGE_TEXT = {
   DRAFT: 'Preparing order',
@@ -103,6 +105,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
   const [note, setNote] = useState('')
   const [sms, setSms] = useState('')
   const pollRef = useRef(null)
+  const pollVersion = useRef(0)
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -115,10 +118,11 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  useEffect(() => () => clearInterval(pollRef.current), [])
+  useEffect(() => () => { pollVersion.current++; clearInterval(pollRef.current) }, [])
 
   useEffect(() => {
     if (!open) {
+      pollVersion.current++
       clearInterval(pollRef.current)
       setFiles([])
       setCode('')
@@ -174,10 +178,12 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
 
   function startPolling(orderId, token) {
     clearInterval(pollRef.current)
+    const version = ++pollVersion.current
     let slow = false
     const tick = async () => {
       try {
         const res = await reportsApi.status(orderId, token)
+        if (version !== pollVersion.current) return
         setStatus(res.status)
         const last = res.status.messages?.filter(m => m.kind === 'support').at(-1)
         if (last) markSeen(orderId, last.at)
@@ -188,7 +194,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
           pollRef.current = setInterval(tick, 15000)
         }
       } catch (err) {
-        setError(err.message)
+        if (version === pollVersion.current) setError(err.message)
       }
     }
     tick()
@@ -301,6 +307,9 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
   }
 
   function openSaved(saved) {
+    setNote('')
+    setSms('')
+    setError('')
     setShowOrdersFirst(false)
     setOrder(saved)
     setStatus(null)
@@ -565,31 +574,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             )}
 
             <div>
-              <div className="font-semibold text-sm">Messages &amp; updates</div>
-              {status.messages?.length > 0 && (
-                <ul className="mt-1 space-y-1 text-sm">
-                  {status.messages
-                    .slice()
-                    .reverse()
-                    .map((m, k) => (
-                      <li
-                        key={k}
-                        className={
-                          'whitespace-pre-line rounded-lg p-2 ' +
-                          (m.kind === 'support'
-                            ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-300 text-gray-900 dark:text-gray-100'
-                            : m.kind === 'client'
-                              ? 'ml-8 bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100'
-                              : 'bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300')
-                        }
-                      >
-                        {m.kind === 'support' && <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">💬 JK Support</div>}
-                        {m.kind === 'client' && <div className="text-xs font-semibold text-blue-700 dark:text-blue-300">You</div>}
-                        {m.text}
-                      </li>
-                    ))}
-                </ul>
-              )}
+              <TurnitinMessages key={order.orderId} orderId={order.orderId} messages={status.messages || []} />
               {status.chatOpensAt && !status.deleted && (
                 <p className="mt-2 rounded-xl bg-gray-50 dark:bg-slate-800 p-3 text-sm text-gray-700 dark:text-gray-300">
                   ⏳ Your reports are being prepared and usually arrive in time. Messaging opens at{' '}

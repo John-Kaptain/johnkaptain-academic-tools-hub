@@ -190,7 +190,7 @@ export default function App() {
 
       <main className="container-narrow space-y-4 pb-6">
         {CATEGORIES.map(cat => (
-          <section key={cat.id} id={cat.id} className={`px-3 sm:px-4 py-5 rounded-2xl ${sectionBg[cat.id]}`}>
+          <section key={cat.id} id={cat.id} className={`catalog-section px-3 sm:px-4 py-5 rounded-2xl ${sectionBg[cat.id]}`}>
             <h2 className="section-title">{cat.title}</h2>
             <div className="mt-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filterItems(cat.items).map(item =>
