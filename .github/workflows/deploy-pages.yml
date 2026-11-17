@@ -42,8 +42,9 @@ jobs:
         run: npm test
 
       - name: Build production website
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
         run: npm run build
-
       - name: Verify Turnitin orders buttons in generated assets
         run: |
           grep -Rq "View My Turnitin Orders" dist/assets
