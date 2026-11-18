@@ -194,9 +194,9 @@ function scheduleRemotePush(delay = 1500) {
 }
 
 // Order records are small (no files: those stay on Telegram). Unpaid orders
-// are dropped after 36 h; paid orders keep their chat (logins) for 30 days.
+// are dropped after 36 h; paid orders keep their chat (logins) for 40 days.
 const UNPAID_ORDER_RETENTION_MS = 36 * 60 * 60 * 1000
-const PAID_ORDER_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+const PAID_ORDER_RETENTION_MS = 40 * 24 * 60 * 60 * 1000
 function pruneOrders(now = Date.now()) {
   let removed = 0
   for (const [id, order] of Object.entries(orders)) {
