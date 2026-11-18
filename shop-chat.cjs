@@ -205,7 +205,16 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
     rememberTelegramMessage(orderId, confirmation?.result?.message_id)
   }
 
-  return { issueToken, authorize, view, clientMessage, handleUpdate, notifyAdmin, rememberTelegramMessage, replyMarkup, findFile }
+  // JK admin web panel: a reply or file from the panel, shown on the order page
+  // exactly like one sent from Telegram.
+  function adminMessage(orderId, text, file = null) {
+    if (!getOrder(orderId)) { const e = new Error('Order not found'); e.status = 404; throw e }
+    const clean = String(text || '').trim().slice(0, MAX_MESSAGE_CHARS)
+    if (!clean && !file) { const e = new Error('Write a message first.'); e.status = 400; throw e }
+    return addMessage(orderId, 'support', clean, file)
+  }
+
+  return { issueToken, authorize, view, clientMessage, handleUpdate, notifyAdmin, rememberTelegramMessage, replyMarkup, findFile, adminMessage }
 }
 
 module.exports = { createShopChat, sha256 }
