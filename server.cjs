@@ -181,7 +181,7 @@ function scheduleRemotePush(delay = 1500) {
   remotePushTimer = setTimeout(async () => {
     remotePushTimer = null
     try {
-      await remoteStoreRequest('PUT', { orders })
+      await remoteStoreRequest('PUT', { orders, serviceUrl: PUBLIC_BASE_URL || null })
       remoteStore.lastSavedAt = new Date().toISOString()
       remoteStore.lastError = null
     } catch (err) {
@@ -979,6 +979,57 @@ app.get('/api/orders/:orderId/files/:key', async (req, res) => {
     return res.status(err.status || 502).json({ error: err.status ? err.message : 'Could not fetch the file. Please try again.' })
   }
 })
+// ---- JK admin web panel (on the bot service) ----
+// The panel reads orders from the bot's copy of the store; replies and files
+// it sends come here, protected by SHOP_STORE_KEY (same key as the store).
+function adminAuthorized(req) {
+  const given = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  if (SHOP_STORE_KEY.length < 16) return false
+  const a = Buffer.from(given), b = Buffer.from(SHOP_STORE_KEY)
+  return a.length === b.length && require('crypto').timingSafeEqual(a, b)
+}
+app.post('/api/admin/orders/:orderId/reply', (req, res) => {
+  if (!adminAuthorized(req)) return res.status(404).end()
+  try {
+    shopChat.adminMessage(req.params.orderId, req.body?.text)
+    return res.json({ ok: true })
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+// A file from the panel is parked on Telegram (like files sent from Telegram):
+// uploaded to the admin chat to get a file id, then that upload is deleted.
+app.put('/api/admin/orders/:orderId/file',
+  express.raw({ type: () => true, limit: '20mb' }),
+  async (req, res) => {
+    if (!adminAuthorized(req)) return res.status(404).end()
+    try {
+      if (!getOrder(req.params.orderId)) return res.status(404).json({ error: 'Order not found' })
+      if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return res.status(503).json({ error: 'Telegram is not configured on the shop service.' })
+      const decode = v => { try { return decodeURIComponent(String(v || '')) } catch { return '' } }
+      const name = path.basename(decode(req.headers['x-file-name'])).replace(/[\r\n"\\/]/g, '_').slice(0, 160)
+      const caption = decode(req.headers['x-caption']).slice(0, 1000)
+      const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
+      if (!name || !body.length) return res.status(400).json({ error: 'Choose a file.' })
+      const form = new FormData()
+      form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID)
+      form.append('disable_notification', 'true')
+      form.append('document', new Blob([body]), name)
+      const upload = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`, { method: 'POST', body: form })
+      const data = await upload.json().catch(() => ({}))
+      const doc = data?.result?.document
+      if (!upload.ok || !data.ok || !doc) throw new Error(data?.description || 'Telegram upload failed')
+      telegramApi('deleteMessage', { chat_id: TELEGRAM_ADMIN_CHAT_ID, message_id: data.result.message_id }).catch(() => {})
+      shopChat.adminMessage(req.params.orderId, caption, {
+        telegramFileId: doc.file_id, name: doc.file_name || name, size: Number(doc.file_size || body.length),
+        mime: doc.mime_type || '', key: require('crypto').randomBytes(8).toString('hex'),
+      })
+      return res.json({ ok: true })
+    } catch (err) {
+      return res.status(err.status || 502).json({ error: err.message })
+    }
+  })
+
 app.post('/telegram/webhook', (req, res) => {
   if (!TELEGRAM_WEBHOOK_SECRET || req.headers['x-telegram-bot-api-secret-token'] !== TELEGRAM_WEBHOOK_SECRET) {
     return res.status(401).end()
@@ -1046,7 +1097,7 @@ app.get('/health', async (req, res) => {
     orderStore: remoteStore.enabled
       ? { where: 'JK Turnitin Bot disk', loaded: remoteStore.loaded, lastSavedAt: remoteStore.lastSavedAt, lastError: remoteStore.lastError }
       : { where: 'this service only (wiped on deploy/restart) — set SHOP_STORE_KEY' },
-    deployMarker: 'shop-chat-v3',
+    deployMarker: 'shop-chat-v4-admin-panel',
   })
 })
 
