@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { shopChat, markShopSeen, shopFileUrl } from '../shopChat.js'
+import NotifyButton from './NotifyButton.jsx'
 
 const formatSize = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB')
 
@@ -61,6 +62,11 @@ export default function OrderChat({ orderId, token, compact = false }) {
         <div className="font-semibold text-sm">💬 Chat with JK Support</div>
         <div className="text-xs text-gray-500">Order {orderId}</div>
       </div>
+      {thread?.paid && (
+        <div className="mt-2">
+          <NotifyButton label="🔔 Notify me when JK Support replies" />
+        </div>
+      )}
       <div className={`mt-2 space-y-2 overflow-y-auto ${compact ? 'max-h-48' : 'max-h-72'}`}>
         {!messages.length && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
