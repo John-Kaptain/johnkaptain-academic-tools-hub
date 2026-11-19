@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import InstallAppButton from './InstallAppButton.jsx'
 
 export default function Navbar({
   sections = [],
@@ -63,6 +64,8 @@ export default function Navbar({
               })}
             </nav>
 
+            <InstallAppButton className="rounded-2xl bg-white px-4 py-3 font-bold text-blue-700 shadow hover:bg-blue-50 transition" />
+
             <button
               type="button"
               onClick={onToggleTheme}
@@ -73,6 +76,11 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
+            <InstallAppButton
+              label="📲 App"
+              className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition"
+            />
+
             <button
               type="button"
               onClick={onToggleTheme}
