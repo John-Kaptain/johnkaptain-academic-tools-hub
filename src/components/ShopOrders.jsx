@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import OrderChat from './OrderChat.jsx'
 import { savedShopOrders } from '../shopChat.js'
 
 // "💬 My orders": every tool/service order placed on this device, each with
 // its chat to JK Support (logins and updates arrive here).
-export default function ShopOrders({ open, onClose, unread = [] }) {
+export default function ShopOrders({ open, onClose, unread = [], initialOrderId = null }) {
   const orders = savedShopOrders()
-  const [active, setActive] = useState(null)
+  const [active, setActive] = useState(initialOrderId)
+  useEffect(() => { if (open && initialOrderId) setActive(initialOrderId) }, [open, initialOrderId])
   if (!open) return null
   const current = orders.find(o => o.orderId === active) || (orders.length === 1 ? orders[0] : null)
 

@@ -52,6 +52,7 @@ export default function App() {
   const [shopOpen, setShopOpen] = useState(false)
   const [shopCount, setShopCount] = useState(() => savedShopOrders().length)
   const [shopUnread, setShopUnread] = useState([])
+  const [shopInitial, setShopInitial] = useState(null)
 
   // Replies from JK Support (Telegram) to this device's tool/service orders.
   const checkShopReplies = () => {
@@ -105,6 +106,25 @@ export default function App() {
     setReportsOrdersFirst(ordersFirst)
     setReportsOpen(true)
   }
+
+  // A tapped notification opens its order: /?order=<id> (reports) or /?shop=<id>.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const reportId = params.get('order')
+    const shopId = params.get('shop')
+    if (!reportId && !shopId) return
+    if (reportId) {
+      const saved = savedOrders().find(o => o.orderId === reportId)
+      if (saved) openReports(null, saved)
+    } else if (savedShopOrders().some(o => o.orderId === shopId)) {
+      setShopInitial(shopId)
+      setShopOpen(true)
+    }
+    params.delete('order')
+    params.delete('shop')
+    const rest = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash)
+  }, [])
   const [q, setQ] = useState('')
   const [theme, setTheme] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -225,6 +245,7 @@ export default function App() {
       <ShopOrders
         open={shopOpen}
         unread={shopUnread}
+        initialOrderId={shopInitial}
         onClose={() => {
           setShopOpen(false)
           checkShopReplies()

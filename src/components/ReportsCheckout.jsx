@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { reportsApi, rememberOrder, savedOrders, forgetOrder, markSeen } from '../reportsApi.js'
+import NotifyButton from './NotifyButton.jsx'
 
 import TurnitinMessages from './TurnitinMessages.jsx'
 
@@ -489,6 +490,10 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
               <div className="font-semibold">{STAGE_TEXT[stage] || stage}</div>
               {status.amount ? <div className="text-sm">Amount: Ksh. {status.amount}</div> : null}
             </div>
+
+            {['PAID', 'PROCESSING', 'PARTLY_DELIVERED'].includes(stage) && !status.deleted && (
+              <NotifyButton label="🔔 Notify me when my reports are ready" />
+            )}
 
             {stage === 'PAYMENT' && (
               <p className="text-sm">
