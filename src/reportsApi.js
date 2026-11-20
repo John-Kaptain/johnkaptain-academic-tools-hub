@@ -43,6 +43,15 @@ export const reportsApi = {
   highlights: (orderId, token, fileId, phone) =>
     call(`/api/web/orders/${orderId}/highlights`, { method: 'POST', token, json: { fileId, phone } }),
   proof: (orderId, token, text) => call(`/api/web/orders/${orderId}/proof`, { method: 'POST', token, json: { text } }),
+  // Binance Pay (USDT), Turnitin orders only.
+  binance: (orderId, token, payload) => call(`/api/web/orders/${orderId}/binance`, { method: 'POST', token, json: payload }),
+  binanceProof: (orderId, token, binanceOrderId, image) =>
+    call(`/api/web/orders/${orderId}/binance-proof`, {
+      method: 'PUT',
+      token,
+      body: image || '',
+      headers: { 'Content-Type': image?.type || 'application/octet-stream', 'X-Binance-Order': String(binanceOrderId || '').trim() },
+    }),
   status: (orderId, token) => call(`/api/web/orders/${orderId}`, { token }),
   reportUrl: (orderId, token, reportId) =>
     `${REPORTS_API}/api/web/orders/${orderId}/reports/${reportId}?token=${encodeURIComponent(token)}`,

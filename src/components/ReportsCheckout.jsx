@@ -14,6 +14,22 @@ const STAGE_TEXT = {
   DELIVERED: 'Reports ready',
   CANCELLED: 'Order cancelled',
 }
+// USDT for a Ksh total, rounded up to the cent (same rule as the bot).
+const usdtFor = (kes, rate) => (rate > 0 && kes > 0 ? Math.ceil((kes / rate) * 100 - 1e-9) / 100 : null)
+function CopyButton({ text }) {
+  const [done, setDone] = useState(false)
+  return (
+    <button
+      type="button"
+      className="btn btn-outline !px-2 !py-1 text-xs"
+      onClick={() => {
+        navigator.clipboard?.writeText(String(text)).then(() => { setDone(true); setTimeout(() => setDone(false), 1500) }).catch(() => {})
+      }}
+    >
+      {done ? '✓ Copied' : '📋 Copy'}
+    </button>
+  )
+}
 const inputClass =
   'w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 outline-none'
 
@@ -105,6 +121,8 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
   const [showOrdersFirst, setShowOrdersFirst] = useState(false)
   const [note, setNote] = useState('')
   const [sms, setSms] = useState('')
+  const [binanceId, setBinanceId] = useState('')
+  const [binanceShot, setBinanceShot] = useState(null)
   const pollRef = useRef(null)
   const pollVersion = useRef(0)
   const inputRef = useRef(null)
@@ -202,10 +220,11 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
     pollRef.current = setInterval(tick, 4000)
   }
 
-  async function pay(e) {
-    e.preventDefault()
+  async function pay(e, method = 'mpesa') {
+    e?.preventDefault?.()
     setError('')
     if (!files.length) return setError('Add at least one document.')
+    if (method === 'mpesa' && !phone.trim()) return setError('Enter your M-Pesa number, or pay with Binance.')
     try {
       // Reuse an already-uploaded draft (e.g. after a mistyped code);
       // any change to the document list starts a fresh order.
@@ -222,12 +241,15 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
         current = { ...current, uploaded: true }
         setOrder(current)
       }
-      setBusy('Sending M-Pesa request…')
-      const res = await reportsApi.checkout(current.orderId, current.token, {
-        files: files.map(f => ({ type: f.type, filter: config.similarityFilterChoice ? f.filter : undefined })),
-        code: needsCode ? code : '',
-        phone,
-      })
+      const choices = files.map(f => ({ type: f.type, filter: config.similarityFilterChoice ? f.filter : undefined }))
+      let res
+      if (method === 'binance') {
+        setBusy('Preparing Binance payment…')
+        res = await reportsApi.binance(current.orderId, current.token, { files: choices })
+      } else {
+        setBusy('Sending M-Pesa request…')
+        res = await reportsApi.checkout(current.orderId, current.token, { files: choices, code: needsCode ? code : '', phone })
+      }
       setStatus(res.status)
       rememberOrder(current.orderId, current.token)
       startPolling(current.orderId, current.token)
@@ -271,6 +293,22 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
       setNote('')
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function sendBinanceProof() {
+    setError('')
+    if (binanceShot && binanceShot.size > 5 * 1024 * 1024) return setError('The screenshot must be 5 MB or smaller.')
+    setBusy('Sending…')
+    try {
+      const res = await reportsApi.binanceProof(order.orderId, order.token, binanceId, binanceShot)
+      setStatus(res.status)
+      setBinanceId('')
+      setBinanceShot(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
     }
   }
 
@@ -459,24 +497,46 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1">M-Pesa number</label>
+              <label className="block text-sm font-medium mb-1">M-Pesa number <span className="text-gray-500 font-normal">(for M-Pesa)</span></label>
               <input
                 className={inputClass}
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="07XXXXXXXX / 01XXXXXXXX"
-                required
+                inputMode="tel"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold">
-                {files.length ? (priceKnown ? `Total: Ksh. ${total}` : 'Total shown after code check') : ''}
-              </div>
-              <button className="btn btn-primary" disabled={!files.length || Boolean(busy)}>
-                Pay with M-Pesa
-              </button>
+            <div className="font-semibold">
+              {files.length ? (priceKnown ? `Total: Ksh. ${total}` : 'Total shown after code check') : ''}
             </div>
+            {(() => {
+              const binanceOn = Boolean(config?.binance?.enabled)
+              const binanceBlocked = needsCode || files.some(f => f.type === 'RESALE')
+              const usdt = priceKnown ? usdtFor(total, config?.binance?.kesPerUsdt) : null
+              return (
+                <div className={`grid gap-3 ${binanceOn ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  <button type="submit" className="btn btn-primary flex flex-col items-center !py-3" disabled={!files.length || Boolean(busy)}>
+                    <span>🇰🇪 Pay with M-Pesa</span>
+                    {files.length && priceKnown ? <span className="text-xs font-normal opacity-90">Ksh {total}</span> : null}
+                  </button>
+                  {binanceOn && (
+                    <button
+                      type="button"
+                      className="btn flex flex-col items-center !py-3 bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
+                      disabled={!files.length || Boolean(busy) || binanceBlocked}
+                      onClick={e => pay(e, 'binance')}
+                      title={binanceBlocked ? 'M-Pesa only with a code' : 'Binance Pay (USDT)'}
+                    >
+                      <span>🟡 Pay with Binance</span>
+                      <span className="text-xs font-normal">
+                        {binanceBlocked ? 'M-Pesa only with a code' : usdt ? usdt.toFixed(2) + ' USDT' : 'USDT'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
           </form>
         )}
 
@@ -487,20 +547,63 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
           <div className="mt-5 space-y-3">
             <div className="rounded-xl bg-gray-50 dark:bg-slate-800 p-3">
               <div className="text-sm text-gray-500">Order {status.orderId}</div>
-              <div className="font-semibold">{STAGE_TEXT[stage] || stage}</div>
-              {status.amount ? <div className="text-sm">Amount: Ksh. {status.amount}</div> : null}
+              <div className="font-semibold">
+                {status.paymentMethod === 'BINANCE_USDT' && stage === 'PAYMENT' ? 'Waiting for your Binance payment' : STAGE_TEXT[stage] || stage}
+              </div>
+              {status.paymentMethod === 'BINANCE_USDT' && status.binance
+                ? <div className="text-sm">Amount: {Number(status.binance.amount).toFixed(2)} USDT (Binance)</div>
+                : status.amount ? <div className="text-sm">Amount: Ksh. {status.amount}</div> : null}
             </div>
 
             {['PAID', 'PROCESSING', 'PARTLY_DELIVERED'].includes(stage) && !status.deleted && (
               <NotifyButton label="🔔 Notify me when my reports are ready" />
             )}
 
-            {stage === 'PAYMENT' && (
+            {status.paymentMethod === 'BINANCE_USDT' && status.binance && stage === 'PAYMENT' && (
+              <div className="rounded-xl border-2 border-yellow-400 p-3 space-y-3">
+                <div className="font-semibold">🟡 Pay {Number(status.binance.amount).toFixed(2)} USDT with Binance Pay</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Binance Pay ID: <strong>{status.binance.id}</strong></span>
+                    <CopyButton text={status.binance.id} />
+                  </div>
+                  <div>Name: <strong>{status.binance.name}</strong></div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Note: <strong>{status.binance.note}</strong></span>
+                    <CopyButton text={status.binance.note} />
+                  </div>
+                  <p className="text-xs text-gray-500">Send exactly {Number(status.binance.amount).toFixed(2)} USDT and put the note in the Binance payment note.</p>
+                </div>
+                {status.binance.orderIdSent ? (
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    ✅ Binance Order ID {status.binance.orderIdSent} received. Support will confirm your payment shortly — this page
+                    updates automatically.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">After paying: Binance Order ID (from Payment Details)</label>
+                    <input className={inputClass} value={binanceId} onChange={e => setBinanceId(e.target.value)} placeholder="e.g. 321547896541235" />
+                    <label className="block text-sm font-medium">Screenshot (optional)</label>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setBinanceShot(e.target.files?.[0] || null)} />
+                    <button className="btn btn-primary w-full" onClick={sendBinanceProof} disabled={Boolean(busy) || binanceId.trim().length < 8}>
+                      I've paid
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {status.paymentMethod === 'BINANCE_USDT' && stage === 'PAYMENT_FAILED' && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                The Binance payment was not confirmed. If you paid, message support below with your Binance Order ID.
+              </p>
+            )}
+
+            {status.paymentMethod !== 'BINANCE_USDT' && stage === 'PAYMENT' && (
               <p className="text-sm">
                 Check your phone and enter your M-Pesa PIN. This page updates automatically once payment is confirmed.
               </p>
             )}
-            {stage === 'PAYMENT_FAILED' && (
+            {status.paymentMethod !== 'BINANCE_USDT' && stage === 'PAYMENT_FAILED' && (
               <p className="text-sm text-red-600 dark:text-red-400">
                 The M-Pesa request did not go through. Check the number and tap “Resend M-Pesa request”, or pay
                 to the till and paste the M-Pesa message below.
@@ -508,17 +611,21 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             )}
             {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && (
               <div className="flex flex-wrap gap-2">
-                <input className={`${inputClass} max-w-xs`} value={phone} onChange={e => setPhone(e.target.value)} />
-                <button className="btn btn-primary" onClick={resend} disabled={Boolean(busy)}>
-                  Resend M-Pesa request
-                </button>
+                {status.paymentMethod !== 'BINANCE_USDT' && (
+                  <>
+                    <input className={`${inputClass} max-w-xs`} value={phone} onChange={e => setPhone(e.target.value)} />
+                    <button className="btn btn-primary" onClick={resend} disabled={Boolean(busy)}>
+                      Resend M-Pesa request
+                    </button>
+                  </>
+                )}
                 <button className="btn btn-outline" onClick={cancelOrder}>
                   Cancel order
                 </button>
               </div>
             )}
 
-            {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && config?.tillNumber && (
+            {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && config?.tillNumber && status.paymentMethod !== 'BINANCE_USDT' && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                 <div className="font-semibold text-sm">
                   Paid via Buy Goods Till {config.tillNumber} instead? (Ksh. {status.amount})
