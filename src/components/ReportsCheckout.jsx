@@ -107,6 +107,82 @@ function formatSize(bytes) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`
 }
 
+// "📄 Your reports": each order on this device as a card — document names,
+// a plain status and the report downloads right there (no need to open it).
+const GLANCE = {
+  DRAFT: ['Not paid yet', 'text-gray-600 dark:text-gray-300'],
+  PAYMENT: ['Waiting for payment', 'text-amber-700 dark:text-amber-400'],
+  PAYMENT_FAILED: ['Payment not completed', 'text-red-600 dark:text-red-400'],
+  PAID: ['⏳ Being prepared', 'text-blue-700 dark:text-blue-400'],
+  PROCESSING: ['⏳ Being prepared', 'text-blue-700 dark:text-blue-400'],
+  PARTLY_DELIVERED: ['📥 Reports arriving', 'text-blue-700 dark:text-blue-400'],
+  DELIVERED: ['✅ Reports ready', 'text-emerald-700 dark:text-emerald-400'],
+  CANCELLED: ['Cancelled', 'text-gray-500'],
+}
+function RecentOrders({ recent, onOpen, onForget }) {
+  const [info, setInfo] = useState({})
+  useEffect(() => {
+    let alive = true
+    recent.slice(0, 10).forEach(o => {
+      reportsApi
+        .status(o.orderId, o.token)
+        .then(r => alive && setInfo(m => ({ ...m, [o.orderId]: r.status })))
+        .catch(() => alive && setInfo(m => ({ ...m, [o.orderId]: { missing: true } })))
+    })
+    return () => { alive = false }
+  }, [recent])
+  return (
+    <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <div className="font-semibold">📄 Your reports</div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">Your orders on this device. Tap ⬇ to download a report.</p>
+      <div className="mt-3 space-y-3">
+        {recent.map(o => {
+          const st = info[o.orderId]
+          const names = (st?.files || []).map(f => f.name).filter(Boolean)
+          const title = names.length ? names[0] + (names.length > 1 ? ` (+${names.length - 1} more)` : '') : 'Turnitin order'
+          const [label, color] = st?.missing
+            ? ['Not found (expired)', 'text-gray-500']
+            : st?.deleted ? ['Files deleted', 'text-gray-500'] : GLANCE[st?.stage] || ['…', 'text-gray-500']
+          return (
+            <div key={o.orderId} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{st ? title : 'Loading…'}</div>
+                  <div className="text-xs text-gray-500">
+                    {st?.createdAt ? new Date(st.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) + ' · ' : ''}Order {o.orderId}
+                  </div>
+                </div>
+                <span className={`shrink-0 text-sm font-semibold ${color}`}>{label}</span>
+              </div>
+              {st?.reports?.length > 0 && !st.deleted && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {st.reports.map(r => (
+                    <a
+                      key={r.id}
+                      className="btn btn-primary !py-1.5 !px-3 text-sm max-w-full truncate"
+                      href={reportsApi.reportUrl(o.orderId, o.token, r.id)}
+                    >
+                      ⬇ {r.name}
+                    </a>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between">
+                <button className="text-sm font-semibold text-blue-700 dark:text-blue-400" onClick={() => onOpen(o)}>
+                  Open order ›
+                </button>
+                <button className="text-xs text-gray-500 hover:text-red-600" title="Remove from this device" onClick={() => onForget(o.orderId)}>
+                  Remove ✕
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function ReportsCheckout({ open, presetType, openOrder, ordersFirst = false, onClose }) {
   const [config, setConfig] = useState(null)
   const [configError, setConfigError] = useState('')
@@ -714,25 +790,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
         )}
 
         {!order && recent.length > 0 && (
-          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="text-sm font-semibold">{showOrdersFirst ? 'Your Turnitin orders on this device' : 'Your recent orders on this device'}</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {recent.map(o => (
-                <span key={o.orderId} className="inline-flex items-center gap-1">
-                  <button className="btn btn-outline text-sm" onClick={() => openSaved(o)}>
-                    {o.orderId}
-                  </button>
-                  <button
-                    className="text-xs text-gray-500 hover:text-red-600"
-                    title="Remove from this device"
-                    onClick={() => forgetSaved(o.orderId)}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
+          <RecentOrders recent={recent} onOpen={openSaved} onForget={forgetSaved} />
         )}
       </div>
     </div>
