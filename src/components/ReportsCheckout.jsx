@@ -9,7 +9,7 @@ const STAGE_TEXT = {
   DRAFT: 'Preparing order',
   PAYMENT: 'Waiting for M-Pesa payment',
   PAYMENT_FAILED: 'Payment not completed',
-  PROCESSING: 'Payment confirmed. Your reports are being prepared.',
+  PROCESSING: 'Payment confirmed. Your reports are processing.',
   PARTLY_DELIVERED: 'Reports arriving',
   DELIVERED: 'Reports ready',
   CANCELLED: 'Order cancelled',
@@ -113,8 +113,8 @@ const GLANCE = {
   DRAFT: ['Not paid yet', 'text-gray-600 dark:text-gray-300'],
   PAYMENT: ['Waiting for payment', 'text-amber-700 dark:text-amber-400'],
   PAYMENT_FAILED: ['Payment not completed', 'text-red-600 dark:text-red-400'],
-  PAID: ['⏳ Being prepared', 'text-blue-700 dark:text-blue-400'],
-  PROCESSING: ['⏳ Being prepared', 'text-blue-700 dark:text-blue-400'],
+  PAID: ['⏳ Processing', 'text-blue-700 dark:text-blue-400'],
+  PROCESSING: ['⏳ Processing', 'text-blue-700 dark:text-blue-400'],
   PARTLY_DELIVERED: ['📥 Reports arriving', 'text-blue-700 dark:text-blue-400'],
   DELIVERED: ['✅ Reports ready', 'text-emerald-700 dark:text-emerald-400'],
   CANCELLED: ['Cancelled', 'text-gray-500'],
@@ -765,7 +765,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
               <TurnitinMessages key={order.orderId} orderId={order.orderId} messages={status.messages || []} />
               {status.chatOpensAt && !status.deleted && (
                 <p className="mt-2 rounded-xl bg-gray-50 dark:bg-slate-800 p-3 text-sm text-gray-700 dark:text-gray-300">
-                  ⏳ Your reports are being prepared and usually arrive in time. Messaging opens at{' '}
+                  ⏳ Your reports are processing and usually arrive in time. Messaging opens at{' '}
                   <b>{new Date(status.chatOpensAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b> if they
                   have not arrived by then.
                 </p>
