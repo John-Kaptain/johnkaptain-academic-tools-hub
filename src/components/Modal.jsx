@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
 import OrderChat from './OrderChat.jsx'
 import { rememberShopOrder } from '../shopChat.js'
+import { reportsApi } from '../reportsApi.js'
 
 const BUSINESS_WHATSAPP_E164 = '254701730921'
 const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
@@ -24,6 +25,19 @@ async function apiJson(path, options = {}) {
   }
 
   return data
+}
+
+function CopyButton({ text }) {
+  const [done, setDone] = useState(false)
+  return (
+    <button
+      type="button"
+      className="btn btn-outline !px-2 !py-1 text-xs"
+      onClick={() => navigator.clipboard?.writeText(String(text)).then(() => { setDone(true); setTimeout(() => setDone(false), 1500) }).catch(() => {})}
+    >
+      {done ? '✓ Copied' : '📋 Copy'}
+    </button>
+  )
 }
 
 function makeWhatsAppLink(orderId, itemName) {
@@ -113,9 +127,32 @@ export default function Modal({ open, item, onClose }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const pollRef = useRef(null)
+  // JK_SHOP_INTL_MPESA_V1: paying from outside Kenya (M-Pesa from abroad).
+  const [intlInfo, setIntlInfo] = useState(null) // { number, name } from the JK Turnitin Bot's settings
+  const [abroad, setAbroad] = useState(false)
+  const [manualPay, setManualPay] = useState(null)
+  const [transferRef, setTransferRef] = useState('')
+  const [shot, setShot] = useState(null)
+
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    Promise.all([apiJson('/api/payment-options'), reportsApi.config()])
+      .then(([shop, bot]) => {
+        if (live && shop?.intlMpesa?.enabled && bot?.intlMpesa?.enabled && bot.intlMpesa.number) {
+          setIntlInfo({ number: bot.intlMpesa.number, name: bot.intlMpesa.name })
+        }
+      })
+      .catch(() => {})
+    return () => { live = false }
+  }, [open])
 
   useEffect(() => {
     if (!open) {
+      setAbroad(false)
+      setManualPay(null)
+      setTransferRef('')
+      setShot(null)
       setStep('payment')
       setPaymentPhone('')
       setWhatsAppNumber('')
@@ -172,12 +209,53 @@ export default function Modal({ open, item, onClose }) {
     }
   }
 
-  function startPolling(newOrderId, newChatToken) {
+  async function startIntl() {
+    setError('')
+    setLoading(true)
+    try {
+      const response = await apiJson('/api/checkout-intl', { method: 'POST', body: JSON.stringify({ productId: item.id }) })
+      setOrderId(response.orderId)
+      setChatToken(response.chatToken)
+      setManualPay(response.manualPay)
+      setStep('intl')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function sendTransferProof() {
+    setError('')
+    if (shot && shot.size > 5 * 1024 * 1024) return setError('The screenshot must be 5 MB or smaller.')
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/payment-proof`, {
+        method: 'PUT',
+        headers: { 'Content-Type': shot?.type || 'application/octet-stream', 'X-Order-Token': chatToken, 'X-Payment-Ref': transferRef.trim() },
+        body: shot || '',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Request failed')
+      setManualPay(data.manualPay)
+      // Saved under 💬 My orders now, so the customer can come back while we check.
+      rememberShopOrder({ orderId, token: chatToken, product: item.name })
+      startPolling(orderId, chatToken, { manual: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function startPolling(newOrderId, newChatToken, { manual = false } = {}) {
     // Saved under 💬 My orders only once paid (the chat is for paid orders).
     const rememberPaid = () =>
       newChatToken && rememberShopOrder({ orderId: newOrderId, token: newChatToken, product: item.name })
     let tries = 0
-    const maxTries = 150
+    // An M-Pesa prompt is answered in minutes; a transfer from abroad is
+    // checked by hand, so keep watching for up to an hour.
+    const maxTries = manual ? 900 : 150
 
     if (pollRef.current) {
       clearInterval(pollRef.current)
@@ -190,7 +268,9 @@ export default function Modal({ open, item, onClose }) {
         clearInterval(pollRef.current)
         pollRef.current = null
         setStatusMessage(
-          'Payment is taking longer than expected. Please wait a little and try again.',
+          manual
+            ? 'Still checking your transfer. You can close this window: reopen the order anytime from 💬 My orders.'
+            : 'Payment is taking longer than expected. Please wait a little and try again.',
         )
         return
       }
@@ -233,6 +313,15 @@ export default function Modal({ open, item, onClose }) {
           return
         }
 
+        if (manual) {
+          // Rejected by support: show the reference form again.
+          if (response.manualPay && !response.manualPay.refSent) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
+            setManualPay(response.manualPay)
+          }
+          return
+        }
         setStatusMessage(`Payment status: ${response.paymentState}`)
       } catch {
         setStatusMessage('Checking payment...')
@@ -299,15 +388,92 @@ export default function Modal({ open, item, onClose }) {
 
             {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-wrap gap-3 justify-end">
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Sending STK Push...' : 'Pay Now'}
+                {loading ? 'Sending STK Push...' : '🇰🇪 Pay with M-Pesa'}
               </button>
+              {intlInfo && (
+                <button type="button" className={`btn btn-outline ${abroad ? 'ring-2 ring-primary' : ''}`} onClick={() => setAbroad(v => !v)} aria-expanded={abroad}>
+                  🌍 Paying from outside Kenya
+                </button>
+              )}
               <button type="button" className="btn btn-outline" onClick={onClose}>
                 Cancel
               </button>
             </div>
+            {intlInfo && abroad && (
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div className="text-sm font-semibold">How will you pay?</div>
+                <button type="button" className="btn btn-outline w-full flex flex-col items-start !py-3 text-left" disabled={loading} onClick={startIntl}>
+                  <span>📱 Send to M-Pesa from abroad — Ksh {item.price}</span>
+                  <span className="text-xs font-normal text-gray-500">Wise, WorldRemit, Remitly, Vodacom M-Pesa TZ, Airtel Money…</span>
+                </button>
+              </div>
+            )}
           </form>
+        )}
+
+        {step === 'intl' && manualPay && intlInfo && (
+          <div className="mt-5 space-y-3">
+            <div className="rounded-xl border-2 border-emerald-500 p-3 space-y-3">
+              <div className="font-semibold">📱 Send Ksh {manualPay.amount} to M-Pesa from abroad</div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span>M-Pesa number: <strong>{intlInfo.number}</strong></span>
+                  <CopyButton text={intlInfo.number} />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Name: <strong>{intlInfo.name}</strong></span>
+                  <CopyButton text={intlInfo.name} />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Amount to arrive: <strong>Ksh {manualPay.amount}</strong></span>
+                  <CopyButton text={manualPay.amount} />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Reference / note: <strong>{manualPay.note}</strong></span>
+                  <CopyButton text={manualPay.note} />
+                </div>
+                <p className="text-xs text-gray-500">
+                  Use Wise, WorldRemit, Remitly, Vodacom M-Pesa (TZ), Airtel Money or any service that sends to Kenyan M-Pesa. Choose
+                  Kenya → M-Pesa (mobile money) and add the reference in the note if the service allows it.
+                </p>
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  ⚠️ The full Ksh {manualPay.amount} must arrive. Sending fees are yours — choose “recipient gets Ksh {manualPay.amount}” where offered.
+                </p>
+              </div>
+              {manualPay.refSent ? (
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  ✅ Transfer reference {manualPay.refSent} received. Support will confirm your payment once the money arrives — this window
+                  updates automatically, and the order is saved under 💬 My orders. {statusMessage}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {manualPay.rejected && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      We could not find your transfer yet. Check the reference (and that the full amount arrived), then send it again.
+                    </p>
+                  )}
+                  <label className="block text-sm font-medium">After sending: transfer reference (from the service's receipt)</label>
+                  <input
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none"
+                    value={transferRef}
+                    onChange={e => setTransferRef(e.target.value)}
+                    placeholder="e.g. Wise #123456789 or the M-Pesa code"
+                  />
+                  <label className="block text-sm font-medium">Screenshot of the receipt (optional)</label>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setShot(e.target.files?.[0] || null)} />
+                  <button type="button" className="btn btn-primary w-full" onClick={sendTransferProof} disabled={loading || transferRef.trim().length < 6}>
+                    {loading ? 'Sending…' : "I've paid"}
+                  </button>
+                </div>
+              )}
+            </div>
+            {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
+            <div className="flex justify-end">
+              <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>
+            </div>
+          </div>
         )}
 
         {step === 'waiting' && (

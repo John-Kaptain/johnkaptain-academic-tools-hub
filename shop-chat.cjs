@@ -25,7 +25,7 @@ function safeEqual(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y)
 }
 
-function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminChatId, now = () => Date.now() }) {
+function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminChatId, now = () => Date.now(), onManualDecision = null }) {
   const pendingReply = new Map() // admin chat id -> { orderId, until } (Reply button pressed)
   const rate = new Map()
 
@@ -143,6 +143,27 @@ function createShopChat({ getOrder, upsertOrder, listOrders, telegramApi, adminC
     if (callback) {
       const chatId = String(callback.message?.chat?.id || callback.from?.id || '')
       if (chatId !== String(adminChatId)) return
+      // JK_SHOP_INTL_MPESA_V1: ✅ / ❌ under an M-Pesa-from-abroad proof.
+      const decision = /^(mpaid|mreject):(.+)$/.exec(String(callback.data || ''))
+      if (decision && onManualDecision) {
+        const approve = decision[1] === 'mpaid'
+        let note
+        try {
+          const r = await onManualDecision(decision[2], approve)
+          note = r.already ? '✅ Already confirmed' : approve ? '✅ Payment confirmed' : '❌ Rejected — customer asked to resend'
+        } catch (err) {
+          note = err.message || 'Failed'
+        }
+        await telegramApi('answerCallbackQuery', { callback_query_id: callback.id, text: note }).catch(() => {})
+        const msg = callback.message || {}
+        const base = String(msg.text || msg.caption || '')
+        const done = `${base}\n\n${note}`.slice(0, msg.caption != null ? 1000 : 4000)
+        await telegramApi(msg.caption != null ? 'editMessageCaption' : 'editMessageText', {
+          chat_id: chatId, message_id: msg.message_id, ...(msg.caption != null ? { caption: done } : { text: done }),
+          reply_markup: replyMarkup(decision[2]),
+        }).catch(() => {})
+        return
+      }
       const m = /^(reply|file):(.+)$/.exec(String(callback.data || ''))
       const order = m ? getOrder(m[2]) : null
       const forFiles = m?.[1] === 'file'
