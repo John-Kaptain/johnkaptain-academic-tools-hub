@@ -1,10 +1,10 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
 import OrderChat from './OrderChat.jsx'
-import { rememberShopOrder } from '../shopChat.js'
+import { rememberShopOrder, SHOP_API } from '../shopChat.js'
 import { reportsApi } from '../reportsApi.js'
 
 const BUSINESS_WHATSAPP_E164 = '254701730921'
-const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin
+const API_BASE = SHOP_API
 
 const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
 const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
@@ -137,7 +137,7 @@ export default function Modal({ open, item, onClose }) {
   useEffect(() => {
     if (!open) return
     let live = true
-    Promise.all([apiJson('/api/payment-options'), reportsApi.config()])
+    Promise.all([apiJson('/api/shop/options'), reportsApi.config()])
       .then(([shop, bot]) => {
         if (live && shop?.intlMpesa?.enabled && bot?.intlMpesa?.enabled && bot.intlMpesa.number) {
           setIntlInfo({ number: bot.intlMpesa.number, name: bot.intlMpesa.name })
@@ -188,7 +188,7 @@ export default function Modal({ open, item, onClose }) {
     setLoading(true)
 
     try {
-      const response = await apiJson('/api/checkout', {
+      const response = await apiJson('/api/shop/checkout', {
         method: 'POST',
         body: JSON.stringify({
           productId: item.id,
@@ -213,7 +213,7 @@ export default function Modal({ open, item, onClose }) {
     setError('')
     setLoading(true)
     try {
-      const response = await apiJson('/api/checkout-intl', { method: 'POST', body: JSON.stringify({ productId: item.id }) })
+      const response = await apiJson('/api/shop/checkout-intl', { method: 'POST', body: JSON.stringify({ productId: item.id }) })
       setOrderId(response.orderId)
       setChatToken(response.chatToken)
       setManualPay(response.manualPay)
@@ -230,7 +230,7 @@ export default function Modal({ open, item, onClose }) {
     if (shot && shot.size > 5 * 1024 * 1024) return setError('The screenshot must be 5 MB or smaller.')
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/payment-proof`, {
+      const res = await fetch(`${API_BASE}/api/shop/orders/${encodeURIComponent(orderId)}/payment-proof`, {
         method: 'PUT',
         headers: { 'Content-Type': shot?.type || 'application/octet-stream', 'X-Order-Token': chatToken, 'X-Payment-Ref': transferRef.trim() },
         body: shot || '',
@@ -276,7 +276,7 @@ export default function Modal({ open, item, onClose }) {
       }
 
       try {
-        const response = await apiJson(`/api/payment-status/${newOrderId}`)
+        const response = await apiJson(`/api/shop/payment-status/${newOrderId}`)
 
         if (
           response.paymentState === 'COMPLETE' &&
@@ -335,7 +335,7 @@ export default function Modal({ open, item, onClose }) {
     setLoading(true)
 
     try {
-      await apiJson('/api/delivery-details', {
+      await apiJson('/api/shop/delivery-details', {
         method: 'POST',
         body: JSON.stringify({
           orderId,
