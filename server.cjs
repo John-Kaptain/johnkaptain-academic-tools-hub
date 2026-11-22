@@ -197,6 +197,7 @@ function scheduleRemotePush(delay = 1500) {
 // are dropped after 36 h; paid orders keep their chat (logins) for 40 days.
 const UNPAID_ORDER_RETENTION_MS = 36 * 60 * 60 * 1000
 const PAID_ORDER_RETENTION_MS = 40 * 24 * 60 * 60 * 1000
+const MANUAL_PROOF_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 function pruneOrders(now = Date.now()) {
   let removed = 0
   for (const [id, order] of Object.entries(orders)) {
@@ -204,7 +205,8 @@ function pruneOrders(now = Date.now()) {
     if (!created) continue
     const age = now - created
     const paid = order.paymentState === 'COMPLETE'
-    if (age > (paid ? PAID_ORDER_RETENTION_MS : UNPAID_ORDER_RETENTION_MS)) {
+    const keep = paid ? PAID_ORDER_RETENTION_MS : order.manualProof ? MANUAL_PROOF_RETENTION_MS : UNPAID_ORDER_RETENTION_MS
+    if (age > keep) {
       delete orders[id]
       removed += 1
     }
@@ -497,6 +499,8 @@ const shopChat = require('./shop-chat.cjs').createShopChat({
   listOrders: () => Object.values(orders),
   telegramApi,
   adminChatId: TELEGRAM_ADMIN_CHAT_ID,
+  // ✅ / ❌ under an international M-Pesa proof (Telegram buttons).
+  onManualDecision: (orderId, approve) => decideManualPayment(orderId, approve, 'telegram'),
 })
 
 async function notifyAdmin(order) {
@@ -506,7 +510,9 @@ async function notifyAdmin(order) {
     `Order ID: ${order.id}`,
     `Product: ${order.productName}`,
     `Amount: Ksh. ${order.amount}`,
-    `Payment number: ${order.paymentPhone}`,
+    order.paymentMethod === 'INTL_MPESA'
+      ? `Paid from abroad (M-Pesa) — transfer reference: ${order.manualProof?.ref || '-'}`
+      : `Payment number: ${order.paymentPhone}`,
     `M-Pesa name: ${order.mpesaName || 'Not provided'}`,
     order.deliveryWhatsAppNumber
       ? `WhatsApp (optional contact): https://wa.me/${order.deliveryWhatsAppNumber}`
@@ -539,7 +545,9 @@ async function notifyAdminFailure(order, state) {
     `Order ID: ${order.id}`,
     `Product: ${order.productName}`,
     `Amount: Ksh. ${order.amount}`,
-    `Payment number: ${order.paymentPhone}`,
+    order.paymentMethod === 'INTL_MPESA'
+      ? `M-Pesa from abroad — transfer reference: ${order.manualProof?.ref || '-'}`
+      : `Payment number: ${order.paymentPhone}`,
     `Status: ${state}`,
   ].join('\n')
 
@@ -660,8 +668,8 @@ app.use(
 
       return callback(new Error(`CORS blocked for origin: ${origin}`))
     },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'X-Order-Token'],
+    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'X-Order-Token', 'X-Payment-Ref'],
   }),
 )
 
@@ -798,6 +806,8 @@ app.get('/api/payment-status/:orderId', async (req, res) => {
     paymentState: order.paymentState,
     productName: order.productName,
     amount: order.amount,
+    paymentMethod: order.paymentMethod || 'MPESA',
+    manualPay: manualPayView(order),
   })
 })
 
@@ -979,6 +989,125 @@ app.get('/api/orders/:orderId/files/:key', async (req, res) => {
     return res.status(err.status || 502).json({ error: err.status ? err.message : 'Could not fetch the file. Please try again.' })
   }
 })
+// ---- M-Pesa from abroad (JK_SHOP_INTL_MPESA_V1) ----
+// Customers outside Kenya send the Ksh amount to the Kenyan M-Pesa number
+// (Wise, WorldRemit, Remitly, Vodacom M-Pesa TZ, Airtel…). The number and
+// name shown on the site come from the JK Turnitin Bot's settings; here the
+// order waits for the transfer reference, then the admin confirms it
+// (Telegram ✅ or the web panel). SHOP_INTL_MPESA=false turns it off.
+const INTL_MPESA_ENABLED = String(process.env.SHOP_INTL_MPESA || 'true').toLowerCase() !== 'false'
+const intlProofLimit = new Map()
+
+function manualPayView(order) {
+  if (order.paymentMethod !== 'INTL_MPESA') return null
+  return {
+    method: 'INTL_MPESA', amount: order.amount, currency: 'KES', note: order.paymentNote,
+    refSent: order.manualProof?.ref || null, rejected: Boolean(order.manualRejectedAt && !order.manualProof),
+  }
+}
+const normalizeTransferRef = v => {
+  const c = String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 40)
+  return c.length >= 6 && /\d/.test(c) ? c : ''
+}
+function imageKind(buf) {
+  if (!buf?.length) return null
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { ext: 'jpg', mime: 'image/jpeg' }
+  if (buf.slice(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) return { ext: 'png', mime: 'image/png' }
+  if (buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP') return { ext: 'webp', mime: 'image/webp' }
+  return null
+}
+
+app.get('/api/payment-options', (req, res) => res.json({ ok: true, intlMpesa: { enabled: INTL_MPESA_ENABLED } }))
+
+app.post('/api/checkout-intl', (req, res) => {
+  if (!INTL_MPESA_ENABLED) return res.status(409).json({ error: 'Payment from abroad is not available right now.' })
+  const product = findProductById(req.body?.productId)
+  if (!product) return res.status(404).json({ error: 'Product not found' })
+  const orderId = createOrderId()
+  upsertOrder(orderId, {
+    id: orderId, productId: product.id, productName: product.name, amount: product.price,
+    paymentMethod: 'INTL_MPESA', paymentPhone: null, deliveryWhatsAppNumber: null, mpesaName: null,
+    apiRef: null, invoiceId: null, paymentState: 'PENDING', status: ORDER_STATUS.PAYMENT_PENDING,
+    paymentNote: 'JKS' + orderId.replace(/\D/g, '').slice(-8), createdAt: Date.now(),
+  })
+  return res.json({ ok: true, orderId, chatToken: shopChat.issueToken(orderId), status: ORDER_STATUS.PAYMENT_PENDING, manualPay: manualPayView(getOrder(orderId)) })
+})
+
+app.put('/api/orders/:orderId/payment-proof', express.raw({ type: () => true, limit: '6mb' }), async (req, res) => {
+  try {
+    const order = shopChat.authorize(req.params.orderId, chatToken(req))
+    if (order.paymentMethod !== 'INTL_MPESA') return res.status(409).json({ error: 'This order is paid by M-Pesa prompt.' })
+    if (order.paymentState === 'COMPLETE') return res.status(409).json({ error: 'Payment already confirmed.' })
+    if (order.manualProof) return res.status(409).json({ error: 'Transfer reference already received. Support will confirm shortly.' })
+    const ref = normalizeTransferRef(req.headers['x-payment-ref'])
+    if (!ref) return res.status(400).json({ error: 'Enter the transfer reference from your receipt (letters and numbers).' })
+    const t = Date.now()
+    const hits = (intlProofLimit.get(order.id) || []).filter(x => t - x < 3600_000)
+    if (hits.length >= 5) return res.status(429).json({ error: 'Too many attempts. Please wait a little.' })
+    intlProofLimit.set(order.id, [...hits, t])
+    if (Object.values(orders).some(o => o.id !== order.id && o.manualProof?.ref === ref)) {
+      return res.status(409).json({ error: 'This transfer reference was already used for another order. Message us on WhatsApp if this is a mistake.' })
+    }
+    const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
+    const image = body.length ? imageKind(body) : null
+    if (body.length && !image) return res.status(400).json({ error: 'The screenshot must be a JPG, PNG or WEBP image.' })
+    upsertOrder(order.id, { manualProof: { ref, at: t, hasImage: Boolean(image) }, manualRejectedAt: null })
+    const text = [
+      '🌍 PAYMENT PROOF — M-Pesa from abroad (website order)',
+      `Order ID: ${order.id}`,
+      `Product: ${order.productName}`,
+      `Amount due: Ksh. ${order.amount} (the full amount must arrive, after the sender's fees)`,
+      `Note reference: ${order.paymentNote}`,
+      `Transfer reference: ${ref}`,
+      '',
+      'Check your M-Pesa for the incoming Ksh before confirming. NEVER approve based on a screenshot alone.',
+    ].join('\n')
+    const buttons = { inline_keyboard: [[{ text: '✅ Confirm payment', callback_data: 'mpaid:' + order.id }, { text: '❌ Reject', callback_data: 'mreject:' + order.id }]] }
+    if (TELEGRAM_BOT_TOKEN && TELEGRAM_ADMIN_CHAT_ID) {
+      try {
+        let sent
+        if (image) {
+          const form = new FormData()
+          form.append('chat_id', TELEGRAM_ADMIN_CHAT_ID)
+          form.append('caption', text.slice(0, 1000))
+          form.append('reply_markup', JSON.stringify(buttons))
+          form.append('photo', new Blob([body], { type: image.mime }), `transfer-${order.id}.${image.ext}`)
+          const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: form })
+          sent = await r.json().catch(() => ({}))
+          const photo = sent?.result?.photo
+          if (photo?.length) upsertOrder(order.id, { manualProof: { ...getOrder(order.id).manualProof, telegramFileId: photo[photo.length - 1].file_id } })
+        } else {
+          sent = await telegramApi('sendMessage', { chat_id: TELEGRAM_ADMIN_CHAT_ID, text, reply_markup: buttons })
+        }
+        shopChat.rememberTelegramMessage(order.id, sent?.result?.message_id)
+      } catch (err) {
+        console.error('Proof alert failed:', err.message)
+      }
+    } else {
+      console.log(text)
+    }
+    const updated = getOrder(order.id)
+    return res.json({ ok: true, status: updated.status, paymentState: updated.paymentState, manualPay: manualPayView(updated) })
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+
+// Confirm (paid, as if the M-Pesa prompt succeeded) or reject (the customer
+// may send a corrected reference).
+async function decideManualPayment(orderId, approve, source) {
+  const order = getOrder(orderId)
+  if (!order || order.paymentMethod !== 'INTL_MPESA') { const e = new Error('Order not found'); e.status = 404; throw e }
+  if (order.paymentState === 'COMPLETE') return { already: true, order }
+  if (approve) {
+    await markOrderPaymentComplete(orderId, null, 'manual-' + source)
+  } else {
+    upsertOrder(orderId, { manualProof: null, manualRejected: order.manualProof || null, manualRejectedAt: Date.now() })
+    shopChat.adminMessage(orderId, 'We could not find your transfer yet. Check the reference (or that the full Ksh amount arrived) and send it again, or message us on WhatsApp.')
+  }
+  return { already: false, order: getOrder(orderId) }
+}
+
 // ---- JK admin web panel (on the bot service) ----
 // The panel reads orders from the bot's copy of the store; replies and files
 // it sends come here, protected by SHOP_STORE_KEY (same key as the store).
@@ -995,6 +1124,31 @@ app.post('/api/admin/orders/:orderId/reply', (req, res) => {
     return res.json({ ok: true })
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+app.post('/api/admin/orders/:orderId/manual-payment', async (req, res) => {
+  if (!adminAuthorized(req)) return res.status(404).end()
+  try {
+    const { already, order } = await decideManualPayment(req.params.orderId, req.body?.approve === true, 'panel')
+    return res.json({ ok: true, already, paymentState: order.paymentState, status: order.status })
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message })
+  }
+})
+app.get('/api/admin/orders/:orderId/proof-image', async (req, res) => {
+  if (!adminAuthorized(req)) return res.status(404).end()
+  try {
+    const order = getOrder(req.params.orderId)
+    const fileId = order?.manualProof?.telegramFileId || order?.manualRejected?.telegramFileId
+    if (!fileId) return res.status(404).json({ error: 'No screenshot' })
+    const info = await telegramApi('getFile', { file_id: fileId })
+    const download = await fetch(`https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${info.result.file_path}`)
+    if (!download.ok) throw new Error('Telegram file download failed')
+    res.setHeader('Content-Type', 'image/jpeg')
+    res.setHeader('Cache-Control', 'private, no-store')
+    return res.end(Buffer.from(await download.arrayBuffer()))
+  } catch (err) {
+    return res.status(err.status || 502).json({ error: err.message })
   }
 })
 // A file from the panel is parked on Telegram (like files sent from Telegram):
