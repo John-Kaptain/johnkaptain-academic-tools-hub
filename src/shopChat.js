@@ -1,6 +1,8 @@
 // Website order chat (non-Turnitin products) with the JohnKaptain Academic
 // Tools Bot. Orders and their secret chat keys are remembered on this device.
-export const SHOP_API = String(import.meta.env.VITE_API_BASE || window.location.origin).replace(/\/+$/, '')
+// The shop now runs inside the JK Turnitin Bot service (routes /api/shop/…).
+import { REPORTS_API } from './reportsApi.js'
+export const SHOP_API = REPORTS_API
 
 const ORDERS_KEY = 'jk-shop-orders'
 const SEEN_KEY = 'jk-shop-seen'
@@ -17,12 +19,12 @@ async function call(path, { method = 'GET', token, json } = {}) {
 }
 
 export const shopChat = {
-  thread: (orderId, token) => call(`/api/orders/${orderId}/messages`, { token }),
-  send: (orderId, token, text) => call(`/api/orders/${orderId}/messages`, { method: 'POST', token, json: { text } }),
+  thread: (orderId, token) => call(`/api/shop/orders/${orderId}/messages`, { token }),
+  send: (orderId, token, text) => call(`/api/shop/orders/${orderId}/messages`, { method: 'POST', token, json: { text } }),
 }
 
 export const shopFileUrl = (orderId, token, key) =>
-  `${SHOP_API}/api/orders/${encodeURIComponent(orderId)}/files/${encodeURIComponent(key)}?token=${encodeURIComponent(token)}`
+  `${SHOP_API}/api/shop/orders/${encodeURIComponent(orderId)}/files/${encodeURIComponent(key)}?token=${encodeURIComponent(token)}`
 
 export function savedShopOrders() {
   try {
