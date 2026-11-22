@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import InstallAppButton from './InstallAppButton.jsx'
+import { currentAccount } from '../account.js'
 
 export default function Navbar({
   sections = [],
@@ -10,6 +11,13 @@ export default function Navbar({
   onAccount,
 }) {
   const [open, setOpen] = useState(false)
+  // "Sign in" until the customer signs in, then "My account".
+  const [signedIn, setSignedIn] = useState(() => Boolean(currentAccount()))
+  useEffect(() => {
+    const sync = () => setSignedIn(Boolean(currentAccount()))
+    window.addEventListener('jk-account-changed', sync)
+    return () => window.removeEventListener('jk-account-changed', sync)
+  }, [])
 
   useEffect(() => {
     const onResize = () => {
@@ -72,7 +80,7 @@ export default function Navbar({
               onClick={onAccount}
               className="rounded-2xl bg-white px-4 py-3 font-bold text-blue-700 shadow hover:bg-blue-50 transition"
             >
-              👤 My account
+              {signedIn ? '👤 My account' : '👤 Sign in'}
             </button>
 
             <button
@@ -89,9 +97,9 @@ export default function Navbar({
               type="button"
               onClick={onAccount}
               className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition"
-              aria-label="My account"
+              aria-label={signedIn ? 'My account' : 'Sign in'}
             >
-              👤
+              {signedIn ? '👤' : '👤 Sign in'}
             </button>
             <InstallAppButton
               label="📲 App"
