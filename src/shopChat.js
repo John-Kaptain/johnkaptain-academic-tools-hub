@@ -38,10 +38,11 @@ export function rememberShopOrder(order) {
   try {
     const list = savedShopOrders().filter(o => o.orderId !== order.orderId)
     list.unshift({ ...order, at: Date.now() })
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(list.slice(0, 20)))
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(list.slice(0, 30)))
   } catch {
     /* storage unavailable: the chat still works in this tab */
   }
+  window.dispatchEvent(new CustomEvent('jk-order-saved', { detail: { kind: 'shop', id: order.orderId, token: order.token } }))
 }
 export function shopLastSeen(orderId) {
   try {

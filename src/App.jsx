@@ -7,6 +7,7 @@ import TurnitinCard from './components/TurnitinCard.jsx'
 import { reportsApi, savedOrders, lastSeen } from './reportsApi.js'
 import Footer from './components/Footer.jsx'
 import ShopOrders from './components/ShopOrders.jsx'
+import AccountModal from './components/AccountModal.jsx'
 import { shopChat, savedShopOrders, shopLastSeen } from './shopChat.js'
 import { CATEGORIES as ALL_CATEGORIES } from './data.js'
 
@@ -53,6 +54,7 @@ export default function App() {
   const [shopCount, setShopCount] = useState(() => savedShopOrders().length)
   const [shopUnread, setShopUnread] = useState([])
   const [shopInitial, setShopInitial] = useState(null)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   // Replies from JK Support (Telegram) to this device's tool/service orders.
   const checkShopReplies = () => {
@@ -164,6 +166,7 @@ export default function App() {
         onJump={onJump}
         onToggleTheme={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
         theme={theme}
+        onAccount={() => setAccountOpen(true)}
       />
 
       <section className="hero relative">
@@ -250,6 +253,12 @@ export default function App() {
           setShopOpen(false)
           checkShopReplies()
         }}
+      />
+      <AccountModal
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        onOpenReport={saved => openReports(null, saved)}
+        onOpenShop={id => { setShopInitial(id); setShopOpen(true) }}
       />
       <ReportsCheckout
         open={reportsOpen}
