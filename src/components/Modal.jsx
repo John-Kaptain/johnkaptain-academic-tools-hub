@@ -129,6 +129,7 @@ export default function Modal({ open, item, onClose }) {
   const pollRef = useRef(null)
   // JK_SHOP_INTL_MPESA_V1: paying from outside Kenya (M-Pesa from abroad).
   const [intlInfo, setIntlInfo] = useState(null) // { number, name } from the JK Turnitin Bot's settings
+  const [binanceInfo, setBinanceInfo] = useState(null) // JK_SHOP_BINANCE_V1: { kesPerUsdt, id, name }
   const [abroad, setAbroad] = useState(false)
   const [manualPay, setManualPay] = useState(null)
   const [transferRef, setTransferRef] = useState('')
@@ -142,6 +143,7 @@ export default function Modal({ open, item, onClose }) {
         if (live && shop?.intlMpesa?.enabled && bot?.intlMpesa?.enabled && bot.intlMpesa.number) {
           setIntlInfo({ number: bot.intlMpesa.number, name: bot.intlMpesa.name })
         }
+        if (live && shop?.binance?.enabled) setBinanceInfo(shop.binance)
       })
       .catch(() => {})
     return () => { live = false }
@@ -209,11 +211,11 @@ export default function Modal({ open, item, onClose }) {
     }
   }
 
-  async function startIntl() {
+  async function startIntl(method = 'INTL_MPESA') {
     setError('')
     setLoading(true)
     try {
-      const response = await apiJson('/api/shop/checkout-intl', { method: 'POST', body: JSON.stringify({ productId: item.id }) })
+      const response = await apiJson('/api/shop/checkout-intl', { method: 'POST', body: JSON.stringify({ productId: item.id, method }) })
       setOrderId(response.orderId)
       setChatToken(response.chatToken)
       setManualPay(response.manualPay)
@@ -392,7 +394,7 @@ export default function Modal({ open, item, onClose }) {
               <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? 'Sending STK Push...' : '🇰🇪 Pay with M-Pesa'}
               </button>
-              {intlInfo && (
+              {(intlInfo || binanceInfo) && (
                 <button type="button" className={`btn btn-outline ${abroad ? 'ring-2 ring-primary' : ''}`} onClick={() => setAbroad(v => !v)} aria-expanded={abroad}>
                   🌍 Paying from outside Kenya
                 </button>
@@ -401,19 +403,78 @@ export default function Modal({ open, item, onClose }) {
                 Cancel
               </button>
             </div>
-            {intlInfo && abroad && (
+            {(intlInfo || binanceInfo) && abroad && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                 <div className="text-sm font-semibold">How will you pay?</div>
-                <button type="button" className="btn btn-outline w-full flex flex-col items-start !py-3 text-left" disabled={loading} onClick={startIntl}>
-                  <span>📱 Send to M-Pesa from abroad — Ksh {item.price}</span>
-                  <span className="text-xs font-normal text-gray-500">Wise, WorldRemit, Remitly, Vodacom M-Pesa TZ, Airtel Money…</span>
-                </button>
+                {intlInfo && (
+                  <button type="button" className="btn btn-outline w-full flex flex-col items-start !py-3 text-left" disabled={loading} onClick={() => startIntl('INTL_MPESA')}>
+                    <span>📱 Send to M-Pesa from abroad — Ksh {item.price}</span>
+                    <span className="text-xs font-normal text-gray-500">Wise, WorldRemit, Remitly, Vodacom M-Pesa TZ, Airtel Money…</span>
+                  </button>
+                )}
+                {binanceInfo && (
+                  <button type="button" className="btn w-full flex flex-col items-start !py-3 text-left bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
+                    disabled={loading} onClick={() => startIntl('BINANCE_USDT')}>
+                    <span>🟡 Binance — {(Math.ceil((item.price / binanceInfo.kesPerUsdt) * 100 - 1e-9) / 100).toFixed(2)} USDT</span>
+                    <span className="text-xs font-normal">Binance Pay, no fees</span>
+                  </button>
+                )}
               </div>
             )}
           </form>
         )}
 
-        {step === 'intl' && manualPay && intlInfo && (
+        {step === 'intl' && manualPay?.method === 'BINANCE_USDT' && (
+          <div className="mt-5 space-y-3">
+            <div className="rounded-xl border-2 border-yellow-400 p-3 space-y-3">
+              <div className="font-semibold">🟡 Pay {Number(manualPay.amount).toFixed(2)} USDT with Binance Pay</div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span>Binance Pay ID: <strong>{manualPay.id}</strong></span>
+                  <CopyButton text={manualPay.id} />
+                </div>
+                <div>Name: <strong>{manualPay.name}</strong></div>
+                <div className="flex items-center justify-between gap-2">
+                  <span>Note: <strong>{manualPay.note}</strong></span>
+                  <CopyButton text={manualPay.note} />
+                </div>
+                <p className="text-xs text-gray-500">Send exactly {Number(manualPay.amount).toFixed(2)} USDT and put the note in the Binance payment note.</p>
+              </div>
+              {manualPay.refSent ? (
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  ✅ Binance Order ID {manualPay.refSent} received. Support will confirm your payment shortly — this window updates
+                  automatically, and the order is saved under 💬 My orders. {statusMessage}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {manualPay.rejected && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      We could not find your Binance payment yet. Check the Order ID (and that the full USDT amount was sent), then send it again.
+                    </p>
+                  )}
+                  <label className="block text-sm font-medium">After paying: Binance Order ID (from Payment Details)</label>
+                  <input
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-900 px-4 py-3 outline-none"
+                    value={transferRef}
+                    onChange={e => setTransferRef(e.target.value)}
+                    placeholder="e.g. 321547896541235"
+                  />
+                  <label className="block text-sm font-medium">Screenshot (optional)</label>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setShot(e.target.files?.[0] || null)} />
+                  <button type="button" className="btn btn-primary w-full" onClick={sendTransferProof} disabled={loading || transferRef.trim().length < 8}>
+                    {loading ? 'Sending…' : "I've paid"}
+                  </button>
+                </div>
+              )}
+            </div>
+            {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
+            <div className="flex justify-end">
+              <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>
+            </div>
+          </div>
+        )}
+
+        {step === 'intl' && manualPay?.method !== 'BINANCE_USDT' && manualPay && intlInfo && (
           <div className="mt-5 space-y-3">
             <div className="rounded-xl border-2 border-emerald-500 p-3 space-y-3">
               <div className="font-semibold">📱 Send Ksh {manualPay.amount} to M-Pesa from abroad</div>
