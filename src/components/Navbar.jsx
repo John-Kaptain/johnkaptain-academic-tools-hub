@@ -7,6 +7,7 @@ export default function Navbar({
   onJump,
   onToggleTheme,
   theme = 'light',
+  onAccount,
 }) {
   const [open, setOpen] = useState(false)
 
@@ -68,6 +69,14 @@ export default function Navbar({
 
             <button
               type="button"
+              onClick={onAccount}
+              className="rounded-2xl bg-white px-4 py-3 font-bold text-blue-700 shadow hover:bg-blue-50 transition"
+            >
+              👤 My account
+            </button>
+
+            <button
+              type="button"
               onClick={onToggleTheme}
               className="rounded-2xl bg-teal-500 px-4 py-3 font-bold text-white shadow hover:bg-teal-600 transition"
             >
@@ -76,6 +85,14 @@ export default function Navbar({
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
+            <button
+              type="button"
+              onClick={onAccount}
+              className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition"
+              aria-label="My account"
+            >
+              👤
+            </button>
             <InstallAppButton
               label="📲 App"
               className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition"

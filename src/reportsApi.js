@@ -80,10 +80,11 @@ export function rememberOrder(orderId, token) {
   try {
     const list = savedOrders().filter(o => o.orderId !== orderId)
     list.unshift({ orderId, token, at: Date.now() })
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 10)))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 30)))
   } catch {
     /* storage unavailable: the order still works in this tab */
   }
+  window.dispatchEvent(new CustomEvent('jk-order-saved', { detail: { kind: 'report', id: orderId, token } }))
 }
 export function forgetOrder(orderId) {
   try {
