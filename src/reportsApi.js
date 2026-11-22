@@ -52,6 +52,15 @@ export const reportsApi = {
       body: image || '',
       headers: { 'Content-Type': image?.type || 'application/octet-stream', 'X-Binance-Order': String(binanceOrderId || '').trim() },
     }),
+  // Manual payments from abroad: method 'INTL_MPESA' (Wise, WorldRemit, Vodacom TZ… to M-Pesa) or 'BINANCE_USDT'.
+  manual: (orderId, token, payload) => call(`/api/web/orders/${orderId}/manual`, { method: 'POST', token, json: payload }),
+  manualProof: (orderId, token, reference, image) =>
+    call(`/api/web/orders/${orderId}/manual-proof`, {
+      method: 'PUT',
+      token,
+      body: image || '',
+      headers: { 'Content-Type': image?.type || 'application/octet-stream', 'X-Payment-Ref': String(reference || '').trim() },
+    }),
   status: (orderId, token) => call(`/api/web/orders/${orderId}`, { token }),
   reportUrl: (orderId, token, reportId) =>
     `${REPORTS_API}/api/web/orders/${orderId}/reports/${reportId}?token=${encodeURIComponent(token)}`,

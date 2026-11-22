@@ -199,6 +199,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
   const [sms, setSms] = useState('')
   const [binanceId, setBinanceId] = useState('')
   const [binanceShot, setBinanceShot] = useState(null)
+  const [abroad, setAbroad] = useState(false)
   const pollRef = useRef(null)
   const pollVersion = useRef(0)
   const inputRef = useRef(null)
@@ -300,7 +301,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
     e?.preventDefault?.()
     setError('')
     if (!files.length) return setError('Add at least one document.')
-    if (method === 'mpesa' && !phone.trim()) return setError('Enter your M-Pesa number, or pay with Binance.')
+    if (method === 'mpesa' && !phone.trim()) return setError('Enter your M-Pesa number, or tap “Paying from outside Kenya”.')
     try {
       // Reuse an already-uploaded draft (e.g. after a mistyped code);
       // any change to the document list starts a fresh order.
@@ -322,6 +323,9 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
       if (method === 'binance') {
         setBusy('Preparing Binance payment…')
         res = await reportsApi.binance(current.orderId, current.token, { files: choices })
+      } else if (method === 'intl') {
+        setBusy('Preparing payment details…')
+        res = await reportsApi.manual(current.orderId, current.token, { files: choices, code: needsCode ? code : '', method: 'INTL_MPESA' })
       } else {
         setBusy('Sending M-Pesa request…')
         res = await reportsApi.checkout(current.orderId, current.token, { files: choices, code: needsCode ? code : '', phone })
@@ -377,7 +381,9 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
     if (binanceShot && binanceShot.size > 5 * 1024 * 1024) return setError('The screenshot must be 5 MB or smaller.')
     setBusy('Sending…')
     try {
-      const res = await reportsApi.binanceProof(order.orderId, order.token, binanceId, binanceShot)
+      const res = status?.paymentMethod === 'INTL_MPESA'
+        ? await reportsApi.manualProof(order.orderId, order.token, binanceId, binanceShot)
+        : await reportsApi.binanceProof(order.orderId, order.token, binanceId, binanceShot)
       setStatus(res.status)
       setBinanceId('')
       setBinanceShot(null)
@@ -588,27 +594,53 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             </div>
             {(() => {
               const binanceOn = Boolean(config?.binance?.enabled)
+              const intlOn = Boolean(config?.intlMpesa?.enabled)
               const binanceBlocked = needsCode || files.some(f => f.type === 'RESALE')
               const usdt = priceKnown ? usdtFor(total, config?.binance?.kesPerUsdt) : null
+              const abroadOn = intlOn || binanceOn
               return (
-                <div className={`grid gap-3 ${binanceOn ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  <button type="submit" className="btn btn-primary flex flex-col items-center !py-3" disabled={!files.length || Boolean(busy)}>
-                    <span>🇰🇪 Pay with M-Pesa</span>
-                    {files.length && priceKnown ? <span className="text-xs font-normal opacity-90">Ksh {total}</span> : null}
-                  </button>
-                  {binanceOn && (
-                    <button
-                      type="button"
-                      className="btn flex flex-col items-center !py-3 bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
-                      disabled={!files.length || Boolean(busy) || binanceBlocked}
-                      onClick={e => pay(e, 'binance')}
-                      title={binanceBlocked ? 'M-Pesa only with a code' : 'Binance Pay (USDT)'}
-                    >
-                      <span>🟡 Pay with Binance</span>
-                      <span className="text-xs font-normal">
-                        {binanceBlocked ? 'M-Pesa only with a code' : usdt ? usdt.toFixed(2) + ' USDT' : 'USDT'}
-                      </span>
+                <div className="space-y-3">
+                  <div className={`grid gap-3 ${abroadOn ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <button type="submit" className="btn btn-primary flex flex-col items-center !py-3" disabled={!files.length || Boolean(busy)}>
+                      <span>🇰🇪 Pay with M-Pesa</span>
+                      {files.length && priceKnown ? <span className="text-xs font-normal opacity-90">Ksh {total}</span> : null}
                     </button>
+                    {abroadOn && (
+                      <button
+                        type="button"
+                        className={`btn btn-outline flex flex-col items-center !py-3 ${abroad ? 'ring-2 ring-primary' : ''}`}
+                        disabled={!files.length || Boolean(busy)}
+                        onClick={() => setAbroad(v => !v)}
+                        aria-expanded={abroad}
+                      >
+                        <span>🌍 Paying from outside Kenya</span>
+                        <span className="text-xs font-normal">{abroad ? 'Choose below' : 'Wise, WorldRemit, Binance…'}</span>
+                      </button>
+                    )}
+                  </div>
+                  {abroadOn && abroad && (
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                      <div className="text-sm font-semibold">How will you pay?</div>
+                      {intlOn && (
+                        <button type="button" className="btn btn-outline w-full flex flex-col items-start !py-3 text-left"
+                          disabled={!files.length || Boolean(busy)} onClick={e => pay(e, 'intl')}>
+                          <span>📱 Send to M-Pesa from abroad{files.length && priceKnown ? ` — Ksh ${total}` : ''}</span>
+                          <span className="text-xs font-normal text-gray-500">Wise, WorldRemit, Remitly, Vodacom M-Pesa TZ, Airtel Money…</span>
+                        </button>
+                      )}
+                      {binanceOn && (
+                        <button
+                          type="button"
+                          className="btn w-full flex flex-col items-start !py-3 text-left bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
+                          disabled={!files.length || Boolean(busy) || binanceBlocked}
+                          onClick={e => pay(e, 'binance')}
+                          title={binanceBlocked ? 'Not available with a code' : 'Binance Pay (USDT)'}
+                        >
+                          <span>🟡 Binance{!binanceBlocked && usdt ? ` — ${usdt.toFixed(2)} USDT` : ' (USDT)'}</span>
+                          <span className="text-xs font-normal">{binanceBlocked ? 'Not available with a code — use M-Pesa from abroad' : 'Binance Pay, no fees'}</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )
@@ -619,12 +651,16 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
         {busy && <p className="mt-4 text-sm font-medium">{busy}</p>}
         {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        {status && (
+        {status && (() => {
+          const isManual = ['BINANCE_USDT', 'INTL_MPESA'].includes(status.paymentMethod)
+          const intl = status.paymentMethod === 'INTL_MPESA' ? status.manualPay : null
+          return (
           <div className="mt-5 space-y-3">
             <div className="rounded-xl bg-gray-50 dark:bg-slate-800 p-3">
               <div className="text-sm text-gray-500">Order {status.orderId}</div>
               <div className="font-semibold">
-                {status.paymentMethod === 'BINANCE_USDT' && stage === 'PAYMENT' ? 'Waiting for your Binance payment' : STAGE_TEXT[stage] || stage}
+                {status.paymentMethod === 'BINANCE_USDT' && stage === 'PAYMENT' ? 'Waiting for your Binance payment'
+                  : intl && stage === 'PAYMENT' ? 'Waiting for your transfer' : STAGE_TEXT[stage] || stage}
               </div>
               {status.paymentMethod === 'BINANCE_USDT' && status.binance
                 ? <div className="text-sm">Amount: {Number(status.binance.amount).toFixed(2)} USDT (Binance)</div>
@@ -668,18 +704,69 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
                 )}
               </div>
             )}
+            {intl && stage === 'PAYMENT' && (
+              <div className="rounded-xl border-2 border-emerald-500 p-3 space-y-3">
+                <div className="font-semibold">📱 Send Ksh {intl.amount} to M-Pesa from abroad</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>M-Pesa number: <strong>{intl.number}</strong></span>
+                    <CopyButton text={intl.number} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Name: <strong>{intl.name}</strong></span>
+                    <CopyButton text={intl.name} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Amount to arrive: <strong>Ksh {intl.amount}</strong></span>
+                    <CopyButton text={intl.amount} />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Reference / note: <strong>{intl.note}</strong></span>
+                    <CopyButton text={intl.note} />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Use Wise, WorldRemit, Remitly, Vodacom M-Pesa (TZ), Airtel Money or any service that sends to Kenyan M-Pesa. Choose
+                    Kenya → M-Pesa (mobile money) and add the reference in the note if the service allows it.
+                  </p>
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    ⚠️ The full Ksh {intl.amount} must arrive. Sending fees are yours — choose “recipient gets Ksh {intl.amount}” where offered.
+                  </p>
+                </div>
+                {intl.refSent ? (
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    ✅ Transfer reference {intl.refSent} received. Support will confirm your payment once the money arrives — this page
+                    updates automatically.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">After sending: transfer reference (from the service's receipt)</label>
+                    <input className={inputClass} value={binanceId} onChange={e => setBinanceId(e.target.value)} placeholder="e.g. Wise #123456789 or the M-Pesa code" />
+                    <label className="block text-sm font-medium">Screenshot of the receipt (optional)</label>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setBinanceShot(e.target.files?.[0] || null)} />
+                    <button className="btn btn-primary w-full" onClick={sendBinanceProof} disabled={Boolean(busy) || binanceId.trim().length < 8}>
+                      I've paid
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {intl && stage === 'PAYMENT_FAILED' && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                The transfer was not confirmed. If you sent it, message support below with your transfer reference.
+              </p>
+            )}
             {status.paymentMethod === 'BINANCE_USDT' && stage === 'PAYMENT_FAILED' && (
               <p className="text-sm text-red-600 dark:text-red-400">
                 The Binance payment was not confirmed. If you paid, message support below with your Binance Order ID.
               </p>
             )}
 
-            {status.paymentMethod !== 'BINANCE_USDT' && stage === 'PAYMENT' && (
+            {!isManual && stage === 'PAYMENT' && (
               <p className="text-sm">
                 Check your phone and enter your M-Pesa PIN. This page updates automatically once payment is confirmed.
               </p>
             )}
-            {status.paymentMethod !== 'BINANCE_USDT' && stage === 'PAYMENT_FAILED' && (
+            {!isManual && stage === 'PAYMENT_FAILED' && (
               <p className="text-sm text-red-600 dark:text-red-400">
                 The M-Pesa request did not go through. Check the number and tap “Resend M-Pesa request”, or pay
                 to the till and paste the M-Pesa message below.
@@ -687,7 +774,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             )}
             {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && (
               <div className="flex flex-wrap gap-2">
-                {status.paymentMethod !== 'BINANCE_USDT' && (
+                {!isManual && (
                   <>
                     <input className={`${inputClass} max-w-xs`} value={phone} onChange={e => setPhone(e.target.value)} />
                     <button className="btn btn-primary" onClick={resend} disabled={Boolean(busy)}>
@@ -701,7 +788,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
               </div>
             )}
 
-            {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && config?.tillNumber && status.paymentMethod !== 'BINANCE_USDT' && (
+            {['PAYMENT', 'PAYMENT_FAILED'].includes(stage) && config?.tillNumber && !isManual && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                 <div className="font-semibold text-sm">
                   Paid via Buy Goods Till {config.tillNumber} instead? (Ksh. {status.amount})
@@ -787,7 +874,8 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
               )}
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {!order && recent.length > 0 && (
           <RecentOrders recent={recent} onOpen={openSaved} onForget={forgetSaved} />
