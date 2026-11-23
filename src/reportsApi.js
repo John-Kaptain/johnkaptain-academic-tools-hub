@@ -1,11 +1,28 @@
 // Client for the JK Turnitin Bot's website-orders API (the same service,
 // prices and report engine as the Telegram bot).
 // Override at build time with VITE_JK_REPORTS_API if the bot ever moves.
+import { deviceId } from './device.js'
+
 export const REPORTS_API = String(
   import.meta.env.VITE_JK_REPORTS_API || 'https://jk-turnitin-telegram-bot.onrender.com',
 ).replace(/\/+$/, '')
 
 const STORAGE_KEY = 'jk-report-orders'
+
+// JK_WEB_IDENTITY_V1: who is ordering — this browser, and the signed-in account
+// if any — so resubmitted essays keep unchanged AI verdicts and RECHECK works.
+function identityHeaders() {
+  const h = {}
+  const device = deviceId()
+  if (device) h['X-Device-Id'] = device
+  try {
+    const a = JSON.parse(localStorage.getItem('jk-account') || 'null')
+    if (a?.session) h['X-Account-Session'] = a.session
+  } catch {
+    /* not signed in */
+  }
+  return h
+}
 
 async function call(path, { method = 'GET', token, json, body, headers = {} } = {}) {
   if (!REPORTS_API) throw new Error('The reports service is not configured yet. Please use the Telegram bot.')
@@ -14,6 +31,7 @@ async function call(path, { method = 'GET', token, json, body, headers = {} } = 
     headers: {
       ...(json ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { 'X-Order-Token': token } : {}),
+      ...(path.startsWith('/api/web/orders') ? identityHeaders() : {}),
       ...headers,
     },
     body: json ? JSON.stringify(json) : body,

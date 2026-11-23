@@ -52,6 +52,8 @@ export const account = {
     return r
   },
   list: () => call(''),
+  // Which of these file names can be RECHECKed (same file, first check paid in the last 24 h).
+  recheck: names => call('/recheck', { method: 'POST', json: { names } }),
   // Opening an order from the account on this device: save a key for it here.
   async open(kind, id) {
     const local = kind === 'shop' ? savedShopOrders().find(o => o.orderId === id) : savedOrders().find(o => o.orderId === id)
