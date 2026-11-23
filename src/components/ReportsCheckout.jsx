@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { account, currentAccount } from '../account.js'
 import { reportsApi, rememberOrder, savedOrders, forgetOrder, markSeen } from '../reportsApi.js'
 import NotifyButton from './NotifyButton.jsx'
 
@@ -242,10 +243,29 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
   }, [config])
   // The card button the customer clicked decides the first choice.
   const defaultType = services.find(s => s.type === presetType)?.type || services[0]?.type || ''
-  const priceOf = type => services.find(s => s.type === type)?.price ?? null
-  const total = files.reduce((sum, f) => sum + (priceOf(f.type) || 0), 0)
+  // JK_WEB_IDENTITY_V1: RECHECK for signed-in customers (same file within 24 h of a paid check).
+  const [recheckable, setRecheckable] = useState({})
+  const fileNames = files.map(f => f.file.name).join('\n')
+  useEffect(() => {
+    if (!open || !files.length || !currentAccount()) { setRecheckable({}); return }
+    let live = true
+    account.recheck(files.map(f => f.file.name))
+      .then(r => {
+        if (!live) return
+        const map = {}
+        for (const x of r.files || []) if (x.recheck) map[x.name] = x.recheck
+        setRecheckable(map)
+        // Pick the cheaper recheck for qualifying files still on the full check.
+        setFiles(list => list.map(f => (map[f.file.name] && f.type === 'CHECK' ? { ...f, type: 'RECHECK' } : f)))
+      })
+      .catch(() => {})
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, fileNames])
+  const priceOf = (type, f) => (type === 'RECHECK' ? recheckable[f?.file?.name]?.price ?? null : services.find(s => s.type === type)?.price ?? null)
+  const total = files.reduce((sum, f) => sum + (priceOf(f.type, f) || 0), 0)
   const needsCode = files.some(f => services.find(s => s.type === f.type)?.needsCode)
-  const priceKnown = files.every(f => priceOf(f.type) !== null)
+  const priceKnown = files.every(f => priceOf(f.type, f) !== null)
 
   function addFiles(list) {
     setError('')
@@ -549,6 +569,9 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
                     value={f.type}
                     onChange={e => setFiles(files.map((x, k) => (k === i ? { ...x, type: e.target.value } : x)))}
                   >
+                    {recheckable[f.file.name] && (
+                      <option value="RECHECK">🔁 Recheck (AI + Similarity) — Ksh. {recheckable[f.file.name].price}</option>
+                    )}
                     {services.map(s => (
                       <option key={s.type} value={s.type}>
                         {s.label}

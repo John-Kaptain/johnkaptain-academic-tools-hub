@@ -65,10 +65,13 @@ export default function AccountModal({ open, onClose, onOpenReport, onOpenShop }
 
         {!me && !sent && (
           <form onSubmit={sendCode} className="mt-4 space-y-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Sign in to see all your orders and reports on any phone or computer. No password: we email you a 6-digit code.
-              Signing in is optional — you can order without it.
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Sign in with just your email — no password, we send you a 6-digit code.</p>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 list-disc pl-5 space-y-1">
+              <li>See all your orders and reports on any phone or computer.</li>
+              <li>Get the cheaper <strong>🔁 Recheck</strong> price when you check the same file again within 24 hours.</li>
+              <li>Stay signed in on this device.</li>
+            </ul>
+            <p className="text-xs text-gray-500">Signing in is optional — you can order without it.</p>
             <label className="block text-sm font-medium">Email address</label>
             <input className={inputClass} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
             <button className="btn btn-primary w-full" disabled={Boolean(busy) || !email.trim()}>Email me a code</button>
@@ -97,7 +100,10 @@ export default function AccountModal({ open, onClose, onOpenReport, onOpenShop }
               <span>Signed in as <strong>{me.email}</strong></span>
               <button type="button" className="underline" onClick={() => run('Signing out…', () => account.signOut())}>Sign out</button>
             </div>
-            <p className="text-xs text-gray-500">You stay signed in on this device. Orders you place while signed in are saved here automatically.</p>
+            <p className="text-xs text-gray-500">
+              You stay signed in on this device. Orders you place while signed in are saved here automatically, and re-checking the same
+              file within 24 hours gets the 🔁 Recheck price.
+            </p>
             {orders === null && !error && <p className="text-sm">Loading your orders…</p>}
             {orders && !orders.length && <p className="text-sm text-gray-500">No orders yet.</p>}
             {orders && orders.map(o => (
