@@ -81,8 +81,12 @@ export default function AccountModal({ open, onClose, onOpenReport, onOpenShop }
         {!me && sent && (
           <form onSubmit={verify} className="mt-4 space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              We sent a 6-digit code to <strong>{email.trim()}</strong>. It expires in 10 minutes. Not there? Check your spam or promotions folder.
+              We sent a 6-digit code to <strong>{email.trim()}</strong>. It expires in 10 minutes.
             </p>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30 p-3 text-sm text-amber-900 dark:text-amber-200">
+              📩 <strong>Didn't get the email?</strong> Check your <strong>Spam</strong> or <strong>Promotions</strong> folder — it comes from JK Academic Tools Hub.
+              If you find it there, tap <strong>“Not spam”</strong> so future codes reach your inbox. Still nothing after a minute? Tap “Send a new code” below.
+            </div>
             <label className="block text-sm font-medium">Code</label>
             <input className={`${inputClass} tracking-[0.4em] text-center text-lg`} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               inputMode="numeric" autoComplete="one-time-code" placeholder="••••••" required />
