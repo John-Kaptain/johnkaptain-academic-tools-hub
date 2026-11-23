@@ -8,6 +8,8 @@ import { reportsApi, savedOrders, lastSeen } from './reportsApi.js'
 import Footer from './components/Footer.jsx'
 import ShopOrders from './components/ShopOrders.jsx'
 import AccountModal from './components/AccountModal.jsx'
+import SupportModal from './components/SupportModal.jsx'
+import { support, supportSeen, supportUsed } from './support.js'
 import { shopChat, savedShopOrders, shopLastSeen } from './shopChat.js'
 import { CATEGORIES as ALL_CATEGORIES } from './data.js'
 
@@ -55,6 +57,19 @@ export default function App() {
   const [shopUnread, setShopUnread] = useState([])
   const [shopInitial, setShopInitial] = useState(null)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [supportOpen, setSupportOpen] = useState(false)
+  const [supportUnread, setSupportUnread] = useState(false)
+  // JK_GENERAL_SUPPORT_V1: a dot on "Contact support" when JK Support has replied.
+  const checkGeneralSupport = () =>
+    supportUsed() && support
+      .thread()
+      .then(r => setSupportUnread(r.messages.some(m => m.from === 'support' && m.at > supportSeen())))
+      .catch(() => {})
+  useEffect(() => {
+    checkGeneralSupport()
+    const timer = setInterval(checkGeneralSupport, 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Replies from JK Support (Telegram) to this device's tool/service orders.
   const checkShopReplies = () => {
@@ -254,6 +269,11 @@ export default function App() {
           checkShopReplies()
         }}
       />
+      <SupportModal
+        open={supportOpen}
+        onClose={() => { setSupportOpen(false); checkGeneralSupport() }}
+        onSignIn={() => { setSupportOpen(false); setAccountOpen(true) }}
+      />
       <AccountModal
         open={accountOpen}
         onClose={() => setAccountOpen(false)}
@@ -301,6 +321,16 @@ export default function App() {
             )}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => { setSupportOpen(true); setSupportUnread(false) }}
+          className="relative rounded-2xl px-4 py-2 text-sm font-semibold shadow bg-slate-800 text-white hover:bg-slate-900 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+        >
+          💬 Contact support
+          {supportUnread && (
+            <span className="absolute -top-2 -right-2 rounded-full bg-rose-600 text-white text-xs px-2 py-0.5" aria-label="New reply from support">1</span>
+          )}
+        </button>
         <a
           href="https://wa.me/254701730921"
           target="_blank"

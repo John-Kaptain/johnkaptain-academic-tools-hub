@@ -11,7 +11,7 @@ const STORAGE_KEY = 'jk-report-orders'
 
 // JK_WEB_IDENTITY_V1: who is ordering — this browser, and the signed-in account
 // if any — so resubmitted essays keep unchanged AI verdicts and RECHECK works.
-function identityHeaders() {
+export function identityHeaders() {
   const h = {}
   const device = deviceId()
   if (device) h['X-Device-Id'] = device
