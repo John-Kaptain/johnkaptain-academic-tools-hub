@@ -25,7 +25,7 @@ function identityHeaders() {
 }
 
 async function call(path, { method = 'GET', token, json, body, headers = {} } = {}) {
-  if (!REPORTS_API) throw new Error('The reports service is not configured yet. Please use the Telegram bot.')
+  if (!REPORTS_API) throw new Error('The reports service is not available right now. Please message us on WhatsApp 0701730921.')
   const res = await fetch(`${REPORTS_API}${path}`, {
     method,
     headers: {

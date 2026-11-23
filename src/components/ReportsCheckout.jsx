@@ -5,7 +5,7 @@ import NotifyButton from './NotifyButton.jsx'
 
 import TurnitinMessages from './TurnitinMessages.jsx'
 
-const TELEGRAM_BOT = 'https://t.me/JKTurnitinBot'
+const WHATSAPP = 'https://wa.me/254701730921'
 const STAGE_TEXT = {
   DRAFT: 'Preparing order',
   PAYMENT: 'Waiting for M-Pesa payment',
@@ -468,13 +468,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-xl font-bold">Turnitin AI &amp; Similarity Reports</h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              Same service and prices as the{' '}
-              <a className="underline text-blue-600 dark:text-blue-400" href={TELEGRAM_BOT} target="_blank" rel="noreferrer">
-                JK Turnitin Bot
-              </a>
-              . Reports download here when ready.
-            </p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Upload, pay, and download your reports right here when they're ready.</p>
           </div>
           <button className="btn btn-outline px-3" onClick={onClose} aria-label="Close">
             ✕
@@ -484,8 +478,8 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
         {configError && (
           <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
             {configError}{' '}
-            <a className="underline" href={TELEGRAM_BOT} target="_blank" rel="noreferrer">
-              Open the Telegram bot
+            <a className="underline" href={WHATSAPP} target="_blank" rel="noreferrer">
+              Message us on WhatsApp
             </a>
           </div>
         )}
