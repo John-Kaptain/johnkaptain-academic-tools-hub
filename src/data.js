@@ -96,7 +96,7 @@ export const CATEGORIES = [
         image:
           'https://guides.turnitin.com/hc/article_attachments/47879733204749',
         description:
-          'Share your file and receive both AI and plagiarism reports in minimal time. For automated report generation and possible discounts, join the JK Turnitin Bot: https://t.me/JKTurnitinBot',
+          'Upload your file and receive both AI and plagiarism reports in minimal time, right here on the website. Sign in to get the cheaper Recheck price when you check the same file again within 24 hours.',
       },
       {
         id: 'quillbot-premium',
