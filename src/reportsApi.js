@@ -4,7 +4,8 @@
 import { deviceId } from './device.js'
 
 export const REPORTS_API = String(
-  import.meta.env.VITE_JK_REPORTS_API || 'https://jk-turnitin-telegram-bot.onrender.com',
+  // The service's own address on our domain (Render custom domain).
+  import.meta.env.VITE_JK_REPORTS_API || 'https://api.jkacademictoolshub.com',
 ).replace(/\/+$/, '')
 
 const STORAGE_KEY = 'jk-report-orders'
