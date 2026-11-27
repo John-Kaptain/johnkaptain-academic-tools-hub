@@ -42,14 +42,14 @@ export default function TurnitinCard({ config, onChoose, supportNotice, hasOrder
   }
 
   return (
-    <div className="col-span-2 relative flex flex-col sm:flex-row gap-4 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-white to-emerald-50 dark:from-slate-900 dark:to-emerald-950/40 ring-2 ring-emerald-500 shadow-xl">
+    <div className="col-span-2 xl:col-span-3 relative flex flex-col sm:flex-row gap-4 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-white to-emerald-50 dark:from-slate-900 dark:to-emerald-950/40 ring-2 ring-emerald-500 shadow-xl">
       <span className="absolute -top-3 left-4 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow">
         ⚡ Automated · Instant M-Pesa checkout
       </span>
       <img
         src={IMAGE}
         alt="Turnitin AI and similarity report"
-        className="w-full sm:w-1/3 aspect-video sm:aspect-auto rounded-xl object-cover bg-white"
+        className="w-full sm:w-2/5 sm:self-start aspect-video sm:aspect-auto sm:h-[22rem] rounded-xl object-cover object-left-top bg-white"
       />
       <div className="flex flex-1 flex-col">
         <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">Turnitin Reports</h3>
@@ -131,15 +131,14 @@ export default function TurnitinCard({ config, onChoose, supportNotice, hasOrder
               onDragOver={e => { e.preventDefault(); setDragging(true) }}
               onDragLeave={() => setDragging(false)}
               onDrop={e => { e.preventDefault(); setDragging(false); start(e.dataTransfer?.files) }}
-              className={`mt-3 cursor-pointer rounded-2xl border-[2.5px] border-dashed p-5 text-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
+              className={`mt-3 cursor-pointer rounded-2xl border-[2.5px] border-dashed px-4 py-3.5 text-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
                 dragging
                   ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/50'
                   : 'border-indigo-500 bg-white hover:bg-indigo-50/60 dark:border-indigo-400 dark:bg-slate-900 dark:hover:bg-slate-800'
               }`}
             >
-              <div className="text-4xl leading-none" aria-hidden="true">📄</div>
-              <p className="mt-2 text-lg font-extrabold text-indigo-950 dark:text-white">Drop your document here, or tap to choose</p>
-              <span className="mt-3 inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-base font-bold text-white shadow hover:bg-indigo-700">
+              <p className="text-base font-extrabold text-indigo-950 dark:text-white"><span aria-hidden="true">📄 </span>Drop your document here, or tap to choose</p>
+              <span className="mt-2 inline-block rounded-xl bg-indigo-600 px-5 py-2 text-base font-bold text-white shadow hover:bg-indigo-700">
                 📤 Choose document
               </span>
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
