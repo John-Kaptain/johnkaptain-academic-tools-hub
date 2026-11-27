@@ -605,7 +605,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
               </div>
             )}
 
-            <div>
+            {!abroad && <div>
               <label className="block text-sm font-medium mb-1">M-Pesa number <span className="text-gray-500 font-normal">(for M-Pesa)</span></label>
               <input
                 className={inputClass}
@@ -614,7 +614,7 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
                 placeholder="07XXXXXXXX / 01XXXXXXXX"
                 inputMode="tel"
               />
-            </div>
+            </div>}
 
             <div className="font-semibold">
               {files.length ? (priceKnown ? `Total: Ksh. ${total}` : 'Total shown after code check') : ''}
@@ -622,20 +622,29 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
             {(() => {
               const binanceOn = Boolean(config?.binance?.enabled)
               const intlOn = Boolean(config?.intlMpesa?.enabled)
-              const binanceBlocked = needsCode || files.some(f => f.type === 'RESALE')
+              // JK_BINANCE_PUBLIC_DISCOUNT_V1: the public discount can be paid by Binance; reseller codes can't.
+              const binanceBlocked = needsCode || (files.some(f => f.type === 'RESALE') && !config?.discount?.publicActive)
               const usdt = priceKnown ? usdtFor(total, config?.binance?.kesPerUsdt) : null
               const abroadOn = intlOn || binanceOn
               return (
                 <div className="space-y-3">
                   <div className={`grid gap-3 ${abroadOn ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    <button type="submit" className="btn btn-primary flex flex-col items-center !py-3" disabled={!files.length || Boolean(busy)}>
+                    {/* JK_PAY_CHOICE_HIGHLIGHT_V1: the blue (selected) look follows the customer's choice.
+                        While "outside Kenya" is chosen, tapping M-Pesa switches back to it first. */}
+                    <button
+                      type={abroad ? 'button' : 'submit'}
+                      onClick={abroad ? () => setAbroad(false) : undefined}
+                      aria-pressed={!abroad}
+                      className={`btn ${abroad ? 'btn-outline' : 'btn-primary'} flex flex-col items-center !py-3`}
+                      disabled={!files.length || Boolean(busy)}
+                    >
                       <span>🇰🇪 Pay with M-Pesa</span>
                       {files.length && priceKnown ? <span className="text-xs font-normal opacity-90">Ksh {total}</span> : null}
                     </button>
                     {abroadOn && (
                       <button
                         type="button"
-                        className={`btn btn-outline flex flex-col items-center !py-3 ${abroad ? 'ring-2 ring-primary' : ''}`}
+                        className={`btn ${abroad ? 'btn-primary' : 'btn-outline'} flex flex-col items-center !py-3`}
                         disabled={!files.length || Boolean(busy)}
                         onClick={() => setAbroad(v => !v)}
                         aria-expanded={abroad}
@@ -661,10 +670,10 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
                           className="btn w-full flex flex-col items-start !py-3 text-left bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
                           disabled={!files.length || Boolean(busy) || binanceBlocked}
                           onClick={e => pay(e, 'binance')}
-                          title={binanceBlocked ? 'Not available with a code' : 'Binance Pay (USDT)'}
+                          title={binanceBlocked ? 'Not available with a reseller code' : 'Binance Pay (USDT)'}
                         >
                           <span>🟡 Binance{!binanceBlocked && usdt ? ` — ${usdt.toFixed(2)} USDT` : ' (USDT)'}</span>
-                          <span className="text-xs font-normal">{binanceBlocked ? 'Not available with a code — use M-Pesa from abroad' : 'Binance Pay, no fees'}</span>
+                          <span className="text-xs font-normal">{binanceBlocked ? 'Not available with a reseller code — use M-Pesa from abroad' : 'Binance Pay, no fees'}</span>
                         </button>
                       )}
                     </div>
