@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import InstallAppButton from './InstallAppButton.jsx'
+import RefreshButton from './RefreshButton.jsx'
 import { currentAccount } from '../account.js'
 
 export default function Navbar({
@@ -74,6 +75,7 @@ export default function Navbar({
             </nav>
 
             <InstallAppButton className="rounded-2xl bg-white px-4 py-3 font-bold text-blue-700 shadow hover:bg-blue-50 transition" />
+            <RefreshButton className="rounded-2xl bg-white px-4 py-3 font-bold text-blue-700 shadow hover:bg-blue-50 transition" />
 
             <button
               type="button"
@@ -105,6 +107,7 @@ export default function Navbar({
               label="📲 App"
               className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition"
             />
+            <RefreshButton className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow hover:bg-blue-50 transition" />
 
             <button
               type="button"
