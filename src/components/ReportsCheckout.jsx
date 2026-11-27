@@ -184,7 +184,7 @@ function RecentOrders({ recent, onOpen, onForget }) {
   )
 }
 
-export default function ReportsCheckout({ open, presetType, openOrder, ordersFirst = false, onClose }) {
+export default function ReportsCheckout({ open, presetType, openOrder, ordersFirst = false, initialFiles = null, onClose }) {
   const [config, setConfig] = useState(null)
   const [configError, setConfigError] = useState('')
   const [files, setFiles] = useState([]) // { file, type, filter }
@@ -291,6 +291,16 @@ export default function ReportsCheckout({ open, presetType, openOrder, ordersFir
     setFiles(next)
     setOrder(null)
   }
+
+  // JK_UPLOAD_BOX_V1: documents chosen on the card are added once the prices are known.
+  const addedInitial = useRef(null)
+  useEffect(() => {
+    if (!open) { addedInitial.current = null; return }
+    if (!config || !initialFiles?.length || addedInitial.current === initialFiles) return
+    addedInitial.current = initialFiles
+    addFiles(initialFiles)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, config, initialFiles])
 
   function startPolling(orderId, token) {
     clearInterval(pollRef.current)

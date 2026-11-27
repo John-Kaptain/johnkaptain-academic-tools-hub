@@ -50,6 +50,7 @@ export default function App() {
   const [reportsConfig, setReportsConfig] = useState(null)
   const [reportsOrder, setReportsOrder] = useState(null)
   const [reportsOrdersFirst, setReportsOrdersFirst] = useState(false)
+  const [reportsFiles, setReportsFiles] = useState(null) // JK_UPLOAD_BOX_V1: files picked on the card
   const [supportNotice, setSupportNotice] = useState(null)
   const [hasOrders, setHasOrders] = useState(false)
   const [shopOpen, setShopOpen] = useState(false)
@@ -117,8 +118,9 @@ export default function App() {
     return () => clearInterval(timer)
   }, [])
 
-  const openReports = (type, savedOrder = null, ordersFirst = false) => {
+  const openReports = (type, savedOrder = null, ordersFirst = false, files = null) => {
     setReportsType(type)
+    setReportsFiles(files && files.length ? files : null)
     setReportsOrder(savedOrder)
     setReportsOrdersFirst(ordersFirst)
     setReportsOpen(true)
@@ -285,8 +287,10 @@ export default function App() {
         presetType={reportsType}
         openOrder={reportsOrder}
         ordersFirst={reportsOrdersFirst}
+        initialFiles={reportsFiles}
         onClose={() => {
           setReportsOpen(false)
+          setReportsFiles(null)
           checkSupportReplies()
         }}
       />
