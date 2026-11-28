@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import OrderChat from './OrderChat.jsx'
 import { savedShopOrders } from '../shopChat.js'
 
-// "💬 My orders": every tool/service order placed on this device, each with
+// "💬 Other Service Orders": every tool/service order placed on this device, each with
 // its chat to JK Support (logins and updates arrive here).
 export default function ShopOrders({ open, onClose, unread = [], initialOrderId = null }) {
   const orders = savedShopOrders()
@@ -16,7 +16,7 @@ export default function ShopOrders({ open, onClose, unread = [], initialOrderId 
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative card max-w-lg w-full max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xl font-bold">💬 My orders</h3>
+          <h3 className="text-xl font-bold">💬 Other Service Orders</h3>
           <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>
         </div>
         {!orders.length && <p className="mt-3 text-sm text-gray-500">No orders on this device yet.</p>}
