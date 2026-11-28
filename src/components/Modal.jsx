@@ -8,7 +8,8 @@ const API_BASE = SHOP_API
 
 const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
 const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
-const CHAT_REMINDER = 'After payment, your logins are delivered right here in the order chat (also saved under 💬 My orders). You can also reach us on WhatsApp 0701730921.'
+// JK_SHOP_NOTE_WORDING_V1: names the button customers actually see (💬 Other Service Orders).
+const CHAT_REMINDER = 'After paying, your login details are sent right here in the order chat. You can reopen it anytime from 💬 Other Service Orders (bottom right). Need help? WhatsApp 0701730921.'
 
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -240,7 +241,7 @@ export default function Modal({ open, item, onClose }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'Request failed')
       setManualPay(data.manualPay)
-      // Saved under 💬 My orders now, so the customer can come back while we check.
+      // Saved under 💬 Other Service Orders now, so the customer can come back while we check.
       rememberShopOrder({ orderId, token: chatToken, product: item.name })
       startPolling(orderId, chatToken, { manual: true })
     } catch (err) {
@@ -251,7 +252,7 @@ export default function Modal({ open, item, onClose }) {
   }
 
   function startPolling(newOrderId, newChatToken, { manual = false } = {}) {
-    // Saved under 💬 My orders only once paid (the chat is for paid orders).
+    // Saved under 💬 Other Service Orders only once paid (the chat is for paid orders).
     const rememberPaid = () =>
       newChatToken && rememberShopOrder({ orderId: newOrderId, token: newChatToken, product: item.name })
     let tries = 0
@@ -271,7 +272,7 @@ export default function Modal({ open, item, onClose }) {
         pollRef.current = null
         setStatusMessage(
           manual
-            ? 'Still checking your transfer. You can close this window: reopen the order anytime from 💬 My orders.'
+            ? 'Still checking your transfer. You can close this window: reopen the order anytime from 💬 Other Service Orders.'
             : 'Payment is taking longer than expected. Please wait a little and try again.',
         )
         return
@@ -443,7 +444,7 @@ export default function Modal({ open, item, onClose }) {
               {manualPay.refSent ? (
                 <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   ✅ Binance Order ID {manualPay.refSent} received. Support will confirm your payment shortly — this window updates
-                  automatically, and the order is saved under 💬 My orders. {statusMessage}
+                  automatically, and the order is saved under 💬 Other Service Orders. {statusMessage}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -506,7 +507,7 @@ export default function Modal({ open, item, onClose }) {
               {manualPay.refSent ? (
                 <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   ✅ Transfer reference {manualPay.refSent} received. Support will confirm your payment once the money arrives — this window
-                  updates automatically, and the order is saved under 💬 My orders. {statusMessage}
+                  updates automatically, and the order is saved under 💬 Other Service Orders. {statusMessage}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -599,7 +600,7 @@ export default function Modal({ open, item, onClose }) {
               <p className="mt-1">Order ID: {orderId}</p>
               <p className="mt-1">
                 {chatToken
-                  ? 'JK Support will send your logins in the chat below. You can close this window — reopen it anytime from 💬 My orders.'
+                  ? 'JK Support will send your logins in the chat below. You can close this window — reopen it anytime from 💬 Other Service Orders.'
                   : 'Tap below to continue on WhatsApp and receive your logins.'}
               </p>
             </div>
