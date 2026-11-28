@@ -9,7 +9,23 @@ const API_BASE = SHOP_API
 const OLD_WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order.'
 const WHATSAPP_REMINDER = 'After payment, please enter your WhatsApp number as requested so we can complete your order. Incase of inquiry, WhatsApp 0701730921.'
 // JK_SHOP_NOTE_WORDING_V1: names the button customers actually see (💬 Other Service Orders).
-const CHAT_REMINDER = 'After paying, your login details are sent right here in the order chat. You can reopen it anytime from 💬 Other Service Orders (bottom right). Need help? WhatsApp 0701730921.'
+// JK_SHOP_NOTE_LINKS_V1: the button name in blue, and the WhatsApp number as a tappable button.
+const CHAT_REMINDER = (
+  <>
+    After paying, your login details are sent right here in the order chat. You can reopen it anytime from{' '}
+    <span className="not-italic font-bold text-blue-600 dark:text-blue-400">💬 Other Service Orders</span> (bottom right).
+    Need help? WhatsApp{' '}
+    <a
+      href="https://wa.me/254701730921"
+      target="_blank"
+      rel="noreferrer"
+      className="not-italic inline-block rounded-full bg-green-600 px-2.5 py-0.5 font-bold text-white no-underline shadow hover:bg-green-700"
+      aria-label="Chat on WhatsApp: 0701730921"
+    >
+      0701730921
+    </a>
+  </>
+)
 
 async function apiJson(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
